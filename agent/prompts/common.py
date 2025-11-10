@@ -81,7 +81,15 @@ def get_response_structure() -> str:
 Please format your response like this:
 
 ACTION:
-[Your final action choice - PREFER SINGLE ACTIONS like 'RIGHT' or 'A'. Only use multiple actions like 'UP, UP, RIGHT' if you've verified each step is WALKABLE in the movement preview and map.]"""
+[Your final action choice - PREFER SINGLE ACTIONS like 'RIGHT' or 'A'. Only use multiple actions like 'UP, UP, RIGHT' if you've verified each step is WALKABLE in the movement preview and map.]
+
+EXAMPLES:
+- To press A once: Just respond with "A"
+- To press A twice: Respond with "A, A"  
+- To chain actions: Respond with "A, START" or "UP, RIGHT"
+- Single action preferred: Just "A" or "RIGHT" (not "A, A" unless you need to press it twice)
+
+IMPORTANT: Only include the action(s) you want to perform. Do NOT repeat "ACTION:" or add extra text."""
 
 
 def build_base_prompt(

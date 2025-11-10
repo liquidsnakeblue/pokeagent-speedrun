@@ -39,7 +39,7 @@ def get_phase_1_prompt(
     """
     # Phase 1 Milestones: GAME_RUNNING, PLAYER_NAME_SET, INTRO_CUTSCENE_COMPLETE
     phase_intro = """🎮 PHASE 1: Your goal is to simply progress through thet title screen and name selection as fast as possible.
-    Spam A Until you're in the van, when you're in the moving van just move right a few times, 
+    Spam A and Start "A, START" Until you're in the van (you have a map), when you're in the moving van just move right a few times, 
     then spam A until the cutscene with mom is done."""
     
     return build_base_prompt(

@@ -559,10 +559,8 @@ class SimpleAgent:
         Determine the current phase based on completed milestones.
         
         Returns the phase number to use based on milestone completion:
-        - If all Phase 1 milestones are complete → use Phase 2
-        - If all Phase 1 & 2 milestones are complete → use Phase 3
-        - etc.
-        - If no phases are fully complete → use Phase 1
+        - Stay in Phase 1 until ALL Phase 1 milestones are complete
+        - Only then move to Phase 2, and so on
         
         Args:
             game_state: Current game state (to check milestone completion)
@@ -574,26 +572,47 @@ class SimpleAgent:
         milestones = game_state.get("milestones", {})
         if not milestones:
             # No milestone data, default to phase 1
+            logger.debug("No milestone data available, defaulting to phase 1")
             return 1
         
         # Check phases in order (1, 2, 3, ...)
-        # Find the first phase that is NOT fully complete
+        # Find the first phase that is NOT fully complete - that's the phase we should use
         for phase_num in sorted(self.PHASE_MILESTONES.keys()):
             phase_milestones = self.PHASE_MILESTONES[phase_num]
             
             # Check if all milestones in this phase are completed
+            incomplete_milestones = []
+            complete_milestones = []
             all_complete = True
             for milestone_id in phase_milestones:
                 milestone_data = milestones.get(milestone_id, {})
-                if not milestone_data.get("completed", False):
+                # Handle different possible data structures
+                if isinstance(milestone_data, dict):
+                    is_completed = milestone_data.get("completed", False)
+                elif isinstance(milestone_data, bool):
+                    is_completed = milestone_data
+                else:
+                    # If milestone_data is not a dict or bool, assume not completed
+                    is_completed = False
+                
+                if not is_completed:
                     all_complete = False
-                    break
+                    incomplete_milestones.append(milestone_id)
+                    logger.debug(f"Milestone {milestone_id} not complete. Data: {milestone_data}")
+                else:
+                    complete_milestones.append(milestone_id)
+            
+            # Log phase check result
+            logger.info(f"🔍 Phase {phase_num} check: {len(complete_milestones)}/{len(phase_milestones)} complete. "
+                       f"Complete: {complete_milestones}, Incomplete: {incomplete_milestones}")
             
             if not all_complete:
                 # This phase is not complete, use this phase's prompt
+                logger.info(f"⏸️  Staying in Phase {phase_num} - missing: {incomplete_milestones}")
                 return phase_num
         
         # All phases are complete, use the last phase
+        logger.debug("All phases complete, using last phase")
         return max(self.PHASE_MILESTONES.keys())
     
     def update_phase_from_milestones(self, game_state: Dict[str, Any]) -> bool:
@@ -606,7 +625,28 @@ class SimpleAgent:
         Returns:
             True if phase was changed, False otherwise
         """
+        milestones = game_state.get("milestones", {})
         new_phase = self.determine_current_phase(game_state)
+        
+        # Log milestone status for debugging (especially for phase 1)
+        if self.current_phase == 1 or new_phase != self.current_phase:
+            phase_1_milestones = self.PHASE_MILESTONES[1]
+            milestone_status = []
+            for milestone_id in phase_1_milestones:
+                milestone_data = milestones.get(milestone_id, {})
+                # Handle different data structures
+                if isinstance(milestone_data, dict):
+                    is_completed = milestone_data.get("completed", False)
+                elif isinstance(milestone_data, bool):
+                    is_completed = milestone_data
+                else:
+                    is_completed = False
+                
+                status = "✓" if is_completed else "✗"
+                data_str = str(milestone_data) if milestone_data else "missing"
+                milestone_status.append(f"{milestone_id}: {status} (data: {data_str})")
+            logger.info(f"📊 Phase 1 milestone status: {', '.join(milestone_status)}")
+        
         if new_phase != self.current_phase:
             old_phase = self.current_phase
             self.current_phase = new_phase
@@ -830,8 +870,46 @@ class SimpleAgent:
             # Check storyline milestones and auto-complete objectives
             self.check_storyline_milestones(game_state)
             
+            # Log current phase and milestone status BEFORE phase update
+            milestones = game_state.get("milestones", {})
+            print(f"\n{'='*80}")
+            print(f"📋 PHASE STATUS CHECK (Step {self.state.step_counter})")
+            print(f"{'='*80}")
+            print(f"Current Phase: {self.current_phase}")
+            
+            # Show all Phase 1 milestones status
+            if self.current_phase <= 2:  # Show Phase 1 and 2 if we're in early phases
+                for phase_num in [1, 2]:
+                    phase_milestones = self.PHASE_MILESTONES.get(phase_num, [])
+                    print(f"\nPhase {phase_num} Milestones ({len(phase_milestones)} required):")
+                    completed_count = 0
+                    for milestone_id in phase_milestones:
+                        milestone_data = milestones.get(milestone_id, {})
+                        if isinstance(milestone_data, dict):
+                            is_completed = milestone_data.get("completed", False)
+                        elif isinstance(milestone_data, bool):
+                            is_completed = milestone_data
+                        else:
+                            is_completed = False
+                        
+                        status = "✅ COMPLETE" if is_completed else "❌ INCOMPLETE"
+                        if is_completed:
+                            completed_count += 1
+                        data_preview = str(milestone_data)[:50] if milestone_data else "MISSING"
+                        print(f"  {status} - {milestone_id} (data: {data_preview})")
+                    
+                    phase_complete = completed_count == len(phase_milestones)
+                    print(f"  → Phase {phase_num}: {completed_count}/{len(phase_milestones)} complete {'✅' if phase_complete else '❌'}")
+            
             # Auto-update phase based on milestone completion
-            self.update_phase_from_milestones(game_state)
+            old_phase = self.current_phase
+            phase_changed = self.update_phase_from_milestones(game_state)
+            
+            if phase_changed:
+                print(f"\n⚠️  PHASE CHANGED: {old_phase} → {self.current_phase}")
+            else:
+                print(f"\n✓ Phase unchanged: {self.current_phase}")
+            print(f"{'='*80}\n")
             
             # Get relevant history and stuck detection
             history_summary = self.get_relevant_history_summary(context, coords)
@@ -879,16 +957,47 @@ class SimpleAgent:
             # Make VLM call - double-check frame validation before VLM
             if frame and (hasattr(frame, 'save') or hasattr(frame, 'shape')):
                 print("🔍 Making VLM call...")
+                import time
+                vlm_start_time = time.time()
                 try:
                     # ⭐ LLM RESPONSE RECEIVED HERE ⭐
-                    # Line 885: This is where the LLM sends their response back
+                    # Line 887: This is where the LLM sends their response back
                     response = self.vlm.get_query(frame, prompt, "simple_mode")
+                    vlm_duration_ms = (time.time() - vlm_start_time) * 1000
+                    
+                    # Try to get token stats from LLM logger (per-call stats)
+                    token_stats = ""
+                    try:
+                        from utils.llm_logger import get_llm_logger
+                        llm_logger = get_llm_logger()
+                        if llm_logger:
+                            # Read the last log entry to get this call's token usage
+                            import json
+                            import os
+                            if os.path.exists(llm_logger.log_file):
+                                with open(llm_logger.log_file, 'r') as f:
+                                    lines = f.readlines()
+                                    if lines:
+                                        # Get the last entry (most recent)
+                                        last_entry = json.loads(lines[-1])
+                                        if last_entry.get('type') == 'interaction':
+                                            metadata = last_entry.get('metadata', {})
+                                            token_usage = metadata.get('token_usage', {})
+                                            if token_usage:
+                                                prompt_tokens = token_usage.get('prompt_tokens', 0)
+                                                completion_tokens = token_usage.get('completion_tokens', 0)
+                                                total_tokens = token_usage.get('total_tokens', 0)
+                                                token_stats = f" | Tokens: {total_tokens} ({prompt_tokens} in, {completion_tokens} out)"
+                    except Exception:
+                        pass  # Token stats not available
                     
                     # Print full response for visibility
                     print("\n" + "="*120)
                     print("🤖 LLM FULL RESPONSE:")
                     print("="*120)
                     print(response)
+                    print("="*120)
+                    print(f"⏱️  Response time: {vlm_duration_ms:.0f}ms{token_stats}")
                     print("="*120 + "\n")
                     
                 except Exception as e:
@@ -1057,10 +1166,10 @@ class SimpleAgent:
                     reasoning = line[10:].strip()  # Remove "REASONING:" prefix
                 elif line.upper().startswith('ACTION:'):
                     current_section = 'action'
-                    # Extract actions from this line
+                    # Extract actions from this line (skip the "ACTION:" header itself)
                     action_text = line[7:].strip()  # Remove "ACTION:" prefix
-                    if action_text:  # Only parse if there's content
-                        actions = self._parse_actions(action_text, game_state)
+                    # Don't parse the header line itself - wait for the actual action content
+                    continue  # Skip to next line to get the actual action
                 elif line and current_section:
                     # Continue content of current section
                     if current_section == 'analysis':
@@ -1072,12 +1181,13 @@ class SimpleAgent:
                     elif current_section == 'reasoning':
                         reasoning += " " + line
                     elif current_section == 'action':
-                        # Additional action parsing from action section content
+                        # Parse action content (this is the line after "ACTION:")
                         if line.strip():  # Only process non-empty lines
-                            additional_actions = self._parse_actions(line, game_state)
-                            actions.extend(additional_actions)
-                            if len(actions) >= 10:  # Max 10 actions
-                                actions = actions[:10]
+                            # Parse this line for actions
+                            parsed_actions = self._parse_actions(line, game_state)
+                            if parsed_actions:
+                                actions = parsed_actions  # Replace, don't extend (avoid duplicates)
+                                # Stop after first valid action line to avoid parsing multiple times
                                 break
             
             # Process objectives if mentioned
