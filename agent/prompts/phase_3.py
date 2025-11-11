@@ -6,6 +6,7 @@ from .common import build_base_prompt
 
 
 def get_phase_3_prompt(
+    objectives=None,  # Accept objectives parameter for consistency
     debug: bool = False,
     include_pathfinding_rules: bool = True,
     include_response_structure: bool = True,

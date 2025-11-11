@@ -924,9 +924,12 @@ class SimpleAgent:
             # Build prompt using phase-specific prompt system
             # To switch phases, just change: self.current_phase = 2 (or 3, etc.)
             # To debug prompts, set: self.debug_prompts = True
+            # Pass both raw objectives (for conditional logic) and formatted summary (for display)
+            all_objectives = self.state.objectives  # Raw objectives for conditional prompts
             prompt = get_phase_prompt(
                 phase=self.current_phase,
                 debug=self.debug_prompts,
+                objectives=all_objectives,  # Raw objectives for conditional logic
                 recent_actions_str=recent_actions_str,
                 history_summary=history_summary,
                 objectives_summary=objectives_summary,
