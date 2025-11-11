@@ -489,3 +489,152 @@ def format_map_for_llm_json(map_stitcher, location_name: str, player_coords=None
 
     # Format as readable text
     return map_stitcher.format_map_json_as_text(map_json)
+
+
+def format_map_coordinate_list(raw_tiles, player_coords=None, location_name=None, npcs=None):
+    """
+    Format map as a coordinate-leading list for LLM consumption.
+    
+    Instead of showing a grid, this lists each notable tile with its coordinates.
+    Format: SYMBOL (X,Y) = description
+    
+    Args:
+        raw_tiles: 2D list of tile tuples
+        player_coords: Tuple or dict with player position
+        location_name: Optional location name for context
+        npcs: List of NPC/object events
+        
+    Returns:
+        str: Formatted coordinate list
+    """
+    if not raw_tiles:
+        return "No map data available"
+    
+    # Get player coordinates
+    if isinstance(player_coords, dict):
+        player_x = player_coords.get('x', 0)
+        player_y = player_coords.get('y', 0)
+    elif player_coords:
+        player_x, player_y = player_coords
+    else:
+        player_x, player_y = 0, 0
+    
+    # First, generate the visual grid - this is the source of truth for coordinates
+    grid = format_map_grid(raw_tiles, "South", npcs, player_coords, location_name=location_name)
+    
+    if not grid:
+        return "No map data available"
+    
+    # Get symbol legend for descriptions
+    symbol_legend = get_symbol_legend()
+    
+    # Build coordinate list from the same trimmed grid
+    player_tiles = []
+    interactive_tiles = []  # Doors, stairs, PC, TV, etc.
+    walkable_tiles = []
+    blocked_tiles = []
+    
+    # Track player position in the 0,0 coordinate system
+    player_grid_x = None
+    player_grid_y = None
+    
+    # Parse the grid to build coordinate list
+    for y_idx, row in enumerate(grid):
+        for x_idx, symbol in enumerate(row):
+            coord_x = x_idx
+            coord_y = y_idx
+            
+            # Get description
+            description = symbol_legend.get(symbol, "Unknown")
+            
+            # Check for player
+            if symbol == 'P':
+                player_tiles.append(f"  P ({coord_x},{coord_y}) = Player (current position)")
+                player_grid_x = coord_x
+                player_grid_y = coord_y
+            # Interactive/important tiles
+            elif symbol in ['D', 'S', 'PC', 'T', 'K', 'C', 'B', 'N', '@', '?']:
+                interactive_tiles.append(f"  {symbol} ({coord_x},{coord_y}) = {description}")
+            # Walkable tiles
+            elif symbol == '.':
+                walkable_tiles.append(f"  . ({coord_x},{coord_y}) = {description}")
+            # Blocked tiles
+            elif symbol == '#':
+                blocked_tiles.append((coord_x, coord_y))
+    
+    # Build output - include both grid and coordinate list
+    lines = []
+    
+    grid_height = len(grid)
+    grid_width = len(grid[0]) if grid else 0
+    
+    lines.append("--- VISUAL MAP (ASCII Grid) ---")
+    lines.append("")
+    # Use 0,0 top-left coordinate system
+    if grid_width <= 20 and grid_height <= 20:  # Only for reasonably sized maps
+        # Add column coordinate header (0,1,2,3...)
+        header = "     "
+        for x_idx in range(grid_width):
+            header += f"{x_idx:>3}"
+        lines.append(header)
+        lines.append("")
+    
+    # Add grid rows with row coordinates (0,1,2,3...)
+    for y_idx, row in enumerate(grid):
+        # Show row coordinate on left
+        row_str = f"{y_idx:>3}  " + "  ".join(row)
+        lines.append(row_str)
+    
+    lines.append("")
+    # Add dynamic legend
+    legend = generate_dynamic_legend(grid)
+    lines.append(legend)
+    lines.append("")
+    
+    lines.append("--- MAP TILES (Coordinate Format) ---")
+    lines.append("")
+    
+    # Player position always first
+    if player_tiles:
+        lines.extend(player_tiles)
+        lines.append("")
+    
+    # Interactive/important tiles
+    if interactive_tiles:
+        lines.append("Notable Tiles:")
+        lines.extend(sorted(interactive_tiles))  # Sort for consistency
+        lines.append("")
+    
+    # Only show walkable tiles if the map is sparse (fewer than 50 walkable)
+    if walkable_tiles and len(walkable_tiles) < 50:
+        lines.append("Walkable Tiles:")
+        # Show a sample, not all
+        for tile in walkable_tiles[:20]:
+            lines.append(tile)
+        if len(walkable_tiles) > 20:
+            lines.append(f"  ... and {len(walkable_tiles) - 20} more walkable tiles")
+        lines.append("")
+    
+    # Blocked tiles - just show count and bounds
+    if blocked_tiles:
+        min_x = min(x for x, y in blocked_tiles)
+        max_x = max(x for x, y in blocked_tiles)
+        min_y = min(y for x, y in blocked_tiles)
+        max_y = max(y for x, y in blocked_tiles)
+        lines.append(f"Blocked Tiles: {len(blocked_tiles)} walls/obstacles")
+        lines.append(f"  Area bounds: X=[{min_x},{max_x}], Y=[{min_y},{max_y}]")
+    
+    lines.append("")
+    lines.append("Coordinate System: (0,0) is top-left corner")
+    lines.append("Movement: UP=(x,y-1), DOWN=(x,y+1), LEFT=(x-1,y), RIGHT=(x+1,y)")
+    
+    # Add directional preview if we know player position
+    if player_grid_x is not None and player_grid_y is not None:
+        lines.append("")
+        lines.append("From your position:")
+        lines.append(f"  UP    = ({player_grid_x},{player_grid_y-1})")
+        lines.append(f"  DOWN  = ({player_grid_x},{player_grid_y+1})")
+        lines.append(f"  LEFT  = ({player_grid_x-1},{player_grid_y})")
+        lines.append(f"  RIGHT = ({player_grid_x+1},{player_grid_y})")
+    
+    return "\n".join(lines)

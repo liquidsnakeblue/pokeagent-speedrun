@@ -7,12 +7,12 @@ from .common import build_base_prompt
 
 def get_phase_2_prompt(
     debug: bool = False,
-    include_pathfinding_rules: bool = True,
+    include_pathfinding_rules: bool = False,
     include_response_structure: bool = True,
     include_action_history: bool = True,
-    include_location_history: bool = True,
-    include_objectives: bool = True,
-    include_movement_memory: bool = True,
+    include_location_history: bool = False,
+    include_objectives: bool = False,
+    include_movement_memory: bool = False,
     include_stuck_warning: bool = True,
     **kwargs
 ) -> str:
@@ -36,11 +36,20 @@ def get_phase_2_prompt(
         Complete formatted prompt string
     """
     # Phase 2 Milestones: LITTLEROOT_TOWN, PLAYER_HOUSE_ENTERED, PLAYER_BEDROOM, CLOCK_SET, RIVAL_HOUSE, RIVAL_BEDROOM
-    phase_intro = """🎮 PHASE 2: [PLACEHOLDER - Phase 2 Title]
-[PLACEHOLDER - Describe what the agent should focus on in this phase]
-- [PLACEHOLDER - Goal 1]
-- [PLACEHOLDER - Goal 2]
-- [PLACEHOLDER - Goal 3]"""
+    phase_intro = """🎮 PHASE 2:
+    If inside the truck, move right to exit it.
+    When in littleroot, click A to finish the dialoguje which will bring you into the player's house.
+    When in player's house, go upstairs by moving ONTO the stairs tile.
+    When upstairs, move UP to the wall that has the clock on it. Once you have clicked the clock, do "A, UP, A" to set it.
+
+    Once it is set, move back onto the stairs to go downstairs, and exit the house.
+    
+    Always end each action with "A" at the end after your choice.
+
+    When in Brenden's house at 1F (first floor), GO TOWARDS THE "S" on the map which will be UP.
+    
+    When on 2F (second floor), you must interact with the clock.
+    """
     
     return build_base_prompt(
         phase_intro=phase_intro,

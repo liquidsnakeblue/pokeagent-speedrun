@@ -10,7 +10,7 @@ import json
 import logging
 import numpy as np
 from PIL import Image
-from utils.map_formatter import format_map_grid, format_map_for_llm, generate_dynamic_legend, format_tile_to_symbol
+from utils.map_formatter import format_map_grid, format_map_for_llm, generate_dynamic_legend, format_tile_to_symbol, format_map_coordinate_list
 import base64
 import io
 import os, sys
@@ -869,53 +869,20 @@ def _format_map_info(map_info, player_data=None, include_debug_info=False, inclu
                 context_parts.append(f"Player Position: ({player_coords[0]}, {player_coords[1]})")
             context_parts.append("Note: See screenshot for visual map. Detailed tile data not available.")
     else:
-        # When NOT using JSON format, show ASCII visual maps
-        # Check for pre-generated visual map first (from memory_reader)
-        if map_info.get('visual_map'):
-            # Show the pre-generated map visualization
+        # When NOT using JSON format, ALWAYS use new coordinate system from memory tiles
+        # This ensures consistent 0,0 top-left coordinate system everywhere
+        if 'tiles' in map_info and map_info['tiles']:
+            if location_name:
+                context_parts.append(f"\n--- MAP: {location_name.upper()} ---")
+            else:
+                context_parts.append("\n--- LOCAL MAP (Location unknown) ---")
+            _add_local_map_fallback(context_parts, map_info, include_npcs, location_name, player_coords)
+        elif map_info.get('visual_map'):
+            # Fallback to pre-generated map if no tiles available
             context_parts.append(map_info['visual_map'])
         elif location_name:
-            # Generate map display using MapStitcher
-                # print( Attempting to generate map for location: '{location_name}'")
-                # print( MapStitcher exists: {map_stitcher is not None}")
-            if map_stitcher:
-                # print( MapStitcher has {len(map_stitcher.map_areas)} areas")
-                for map_id in list(map_stitcher.map_areas.keys())[:3]:
-                    area = map_stitcher.map_areas[map_id]
-                    # print(   Area {map_id}: '{area.location_name}'")
-
-                # Show ASCII grid format
-                map_lines = map_stitcher.generate_location_map_display(
-                    location_name=location_name,
-                    player_pos=player_coords,
-                    npcs=npcs,
-                    connections=connections
-                )
-
-                if map_lines:
-                    # print( Generated {len(map_lines)} map lines from MapStitcher")
-                    context_parts.extend(map_lines)
-                    # Add exploration statistics
-                    location_grid = map_stitcher.get_location_grid(location_name)
-                    if location_grid:
-                        total_tiles = len(location_grid)
-                        context_parts.append("")
-                        context_parts.append(f"Total explored: {total_tiles} tiles")
-                else:
-                    # print( MapStitcher returned empty, falling back to memory tiles")
-                    # Fallback if MapStitcher doesn't have data for this location - use memory tiles
-                    if 'tiles' in map_info and map_info['tiles']:
-                        context_parts.append(f"\n--- MAP: {location_name.upper()} (from memory) ---")
-                        _add_local_map_fallback(context_parts, map_info, include_npcs, location_name)
-                    else:
-                        context_parts.append(f"\n--- MAP: {location_name.upper()} ---")
-                        context_parts.append("No map data available")
-
-    if not location_name:
-        # No location name - use local map fallback
-        context_parts.append("\n--- LOCAL MAP (Location unknown) ---")
-        if 'tiles' in map_info and map_info['tiles']:
-            _add_local_map_fallback(context_parts, map_info, include_npcs, None)
+            context_parts.append(f"\n--- MAP: {location_name.upper()} ---")
+            context_parts.append("No map data available")
     
     # NPC information removed - unreliable detection with incorrect positions
     
@@ -926,29 +893,23 @@ def _format_map_info(map_info, player_data=None, include_debug_info=False, inclu
     
     return context_parts
 
-def _add_local_map_fallback(context_parts, map_info, include_npcs, location_name=None):
+def _add_local_map_fallback(context_parts, map_info, include_npcs, location_name=None, player_coords=None):
     """Helper function to add local map display as fallback"""
     if 'tiles' in map_info and map_info['tiles']:
         raw_tiles = map_info['tiles']
-        # Use default facing direction since memory-based facing is unreliable
-        facing = "South"  # default
         
-        # Get player coordinates
-        player_coords = map_info.get('player_coords')
+        # Get player coordinates (use provided or fallback to map_info)
+        if player_coords is None:
+            player_coords = map_info.get('player_coords')
         
         # Get NPCs if available and include_npcs is True
         npcs = []
         if include_npcs and 'object_events' in map_info:
             npcs = map_info.get('object_events', [])
         
-        # Use unified LLM formatter for consistency with NPCs if available
-        map_display = format_map_for_llm(raw_tiles, facing, npcs, player_coords, location_name)
+        # Use new coordinate list format for better LLM readability
+        map_display = format_map_coordinate_list(raw_tiles, player_coords, location_name, npcs)
         context_parts.append(map_display)
-        
-        # Add dynamic legend based on symbols in the map
-        grid = format_map_grid(raw_tiles, facing, npcs, player_coords, location_name=location_name)
-        legend = generate_dynamic_legend(grid)
-        context_parts.append(f"\n{legend}")
 
 def _format_world_map_display(stitched_data, full_state_data=None):
     """Format location-specific map display"""
