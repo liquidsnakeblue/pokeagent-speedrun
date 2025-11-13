@@ -1119,25 +1119,13 @@ class SimpleAgent:
         for token in tokens:
             if token in valid_actions:
                 actions_found.append(token)
-                if len(actions_found) >= 10:  # Max 10 actions
+                if len(actions_found) >= 50:  # Max 50 actions (increased for long pathfinding sequences)
                     break
         
-        # Validate movement sequences if we have game state
-        # BUT: Skip validation if we're in battle - battle sequences use LEFT/RIGHT for move selection
-        is_in_battle = game_state and game_state.get('game', {}).get('is_in_battle', False) if game_state else False
-        
-        if game_state and len(actions_found) > 1 and not is_in_battle:
-            # Check if this is a movement sequence
-            movement_actions = [a for a in actions_found if a in ['UP', 'DOWN', 'LEFT', 'RIGHT']]
-            if movement_actions:
-                # Validate the movement sequence
-                is_valid, reason = self.validate_movement_sequence(movement_actions, game_state)
-                if not is_valid:
-                    logger.warning(f"Movement sequence validation failed: {reason}")
-                    # Only take the first movement if sequence is invalid
-                    if movement_actions:
-                        actions_found = [movement_actions[0]]
-                        logger.info(f"Reduced to single movement: {actions_found[0]}")
+        # Movement validation DISABLED - trust the LLM's pathfinding
+        # The A* pathfinding and suggested actions are smart enough to handle movement
+        # Validation was causing issues with long pathfinding sequences
+        pass
         
         # If no valid actions found, use default
         if not actions_found:

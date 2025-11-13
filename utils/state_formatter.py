@@ -1774,30 +1774,55 @@ def find_directional_goal(grid, player_pos, direction, location_name=''):
     else:
         walkable_tiles = ['.', '~', 'D', 'S']  # Include 'D' (doors)
     
+    grid_width = len(grid[0]) if grid else 0
+    grid_height = len(grid)
+    center_x = grid_width // 2
+    center_y = grid_height // 2
+    
     if direction == 'UP':
-        # Find most northern walkable point
+        # Find most northern walkable point, closest to center X
         for y in range(len(grid)):
+            candidates = []
             for x in range(len(grid[y])):
                 if grid[y][x] in walkable_tiles:
-                    return (x, y)
+                    candidates.append((x, y))
+            if candidates:
+                # Pick the one closest to center X
+                best = min(candidates, key=lambda pos: abs(pos[0] - center_x))
+                return best
     elif direction == 'DOWN':
-        # Find most southern walkable point
+        # Find most southern walkable point, closest to center X
         for y in range(len(grid) - 1, -1, -1):
+            candidates = []
             for x in range(len(grid[y])):
                 if grid[y][x] in walkable_tiles:
-                    return (x, y)
+                    candidates.append((x, y))
+            if candidates:
+                # Pick the one closest to center X
+                best = min(candidates, key=lambda pos: abs(pos[0] - center_x))
+                return best
     elif direction == 'LEFT':
-        # Find most western walkable point
+        # Find most western walkable point, closest to center Y
         for x in range(len(grid[0])):
+            candidates = []
             for y in range(len(grid)):
                 if x < len(grid[y]) and grid[y][x] in walkable_tiles:
-                    return (x, y)
+                    candidates.append((x, y))
+            if candidates:
+                # Pick the one closest to center Y
+                best = min(candidates, key=lambda pos: abs(pos[1] - center_y))
+                return best
     elif direction == 'RIGHT':
-        # Find most eastern walkable point
+        # Find most eastern walkable point, closest to center Y
         for x in range(len(grid[0]) - 1, -1, -1):
+            candidates = []
             for y in range(len(grid)):
                 if x < len(grid[y]) and grid[y][x] in walkable_tiles:
-                    return (x, y)
+                    candidates.append((x, y))
+            if candidates:
+                # Pick the one closest to center Y
+                best = min(candidates, key=lambda pos: abs(pos[1] - center_y))
+                return best
     
     return None
 
