@@ -57,6 +57,7 @@ Focus on progressing through Route 102 and reaching your dad."""
         include_objectives=include_objectives,
         include_movement_memory=include_movement_memory,
         include_stuck_warning=include_stuck_warning,
+        phase_intro_at_end=True,  # Put milestone instructions AFTER map/state
         state_data=state_data,
         **kwargs
     )

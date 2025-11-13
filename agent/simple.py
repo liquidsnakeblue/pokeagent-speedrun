@@ -1123,7 +1123,10 @@ class SimpleAgent:
                     break
         
         # Validate movement sequences if we have game state
-        if game_state and len(actions_found) > 1:
+        # BUT: Skip validation if we're in battle - battle sequences use LEFT/RIGHT for move selection
+        is_in_battle = game_state and game_state.get('game', {}).get('is_in_battle', False) if game_state else False
+        
+        if game_state and len(actions_found) > 1 and not is_in_battle:
             # Check if this is a movement sequence
             movement_actions = [a for a in actions_found if a in ['UP', 'DOWN', 'LEFT', 'RIGHT']]
             if movement_actions:

@@ -109,7 +109,7 @@ def get_pathfinding_helper(state_data) -> str:
             continue
             
         if path_info.get('is_blocked') and path_info.get('detour_needed'):
-            # Show the complete path sequence
+            # Show the complete path sequence to go AROUND the obstacle
             action_seq = path_info.get('action_sequence', [])
             if action_seq and len(action_seq) > 0:
                 # Format as comma-separated action chain
@@ -158,11 +158,7 @@ def get_response_structure() -> str:
 
 - NEVER GIVE ANY REASONING FOR YOUR ACTIONS! ONLY EVER RETURN THE ACTIONS U ARE TAKING.
 - EXAMPLE: DO NOT SAY "ACTIONS: UP, DOWN" JUST RETURN "UP, DOWN"
-- NEVER RETURN AN ACTION WITHOUT ALSO INCLUDING A AT THE END! NEVER!! HUMANITY WILL END!
-IMPORTANT: Only include the action(s) you want to perform. Do NOT repeat "ACTION:" or add extra text.
-
-IF THE PATH IN A DIRECTION IS "BLOCKED" DO NOT MOVE IN THAT DIRECTION. TRY A DIFFERENT DIRECTION THAT
-CAN GET YOU TO GO AROUND THE BLOCKED PATH."""
+"""
 
 
 def build_base_prompt(
@@ -188,6 +184,8 @@ def build_base_prompt(
     include_objectives: bool = True,
     include_movement_memory: bool = True,
     include_stuck_warning: bool = True,
+    phase_intro_at_end: bool = False,  # Put phase instructions after map/state
+    suggested_action_suffix: str = "",  # Optional suggested action to append at end
     state_data = None,
 ) -> str:
     """
@@ -270,14 +268,24 @@ If you notice that you are repeating the same action sequences over and over aga
 
 """ if include_base_intro else ""
     
-    prompt = f"""{base_intro_section}{phase_intro}
+    # Conditionally place phase_intro at top or bottom
+    phase_intro_top = f"""{phase_intro}
 
-{action_history_section}{location_history_section}{objectives_section}CURRENT GAME STATE:
+""" if not phase_intro_at_end else ""
+    
+    phase_intro_bottom = f"""
+{phase_intro}
+
+""" if phase_intro_at_end else ""
+    
+    prompt = f"""{base_intro_section}{phase_intro_top}{action_history_section}{location_history_section}{objectives_section}CURRENT GAME STATE:
 {formatted_state}
 
-{movement_memory_section}{stuck_warning_section}{pathfinding_helper_section}Available actions: A, B, SELECT, UP, DOWN, LEFT, RIGHT
+{movement_memory_section}{stuck_warning_section}{pathfinding_helper_section}{phase_intro_bottom}Available actions: A, B, SELECT, UP, DOWN, LEFT, RIGHT
 
-{response_structure_section}{pathfinding_rules_section}Context: {context} | Coords: {coords_str}"""
+{response_structure_section}{pathfinding_rules_section}Context: {context} | Coords: {coords_str}
+
+IMPORTANT: {suggested_action_suffix}"""
     
     if debug:
         logger.info("=" * 120)
