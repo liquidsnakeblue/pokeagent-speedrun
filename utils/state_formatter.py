@@ -1465,6 +1465,18 @@ def get_movement_preview(state_data):
     player_y_idx = grid_height - 1 - player_grid_y  # Convert display Y back to grid index
     current_tile_symbol = grid[player_y_idx][player_grid_x] if player_y_idx < len(grid) else None
     
+    # IMPORTANT: Check the ACTUAL tile under the player from raw_tiles, not the grid display
+    # The grid shows 'P' where the player is, but we need to know the real tile (D, S, etc.)
+    actual_tile_under_player = None
+    if raw_tiles:
+        center_y = len(raw_tiles) // 2
+        center_x = len(raw_tiles[0]) // 2 if len(raw_tiles) > 0 and len(raw_tiles[0]) > 0 else 0
+        if center_y < len(raw_tiles) and center_x < len(raw_tiles[center_y]):
+            player_tile = raw_tiles[center_y][center_x]
+            if player_tile:
+                from utils.map_formatter import format_tile_to_symbol
+                actual_tile_under_player = format_tile_to_symbol(player_tile)
+    
     for direction in ['UP', 'DOWN', 'LEFT', 'RIGHT']:
         dx_grid, dy_grid = directions_grid[direction]
         dx_display, dy_display = directions_display[direction]
@@ -1493,11 +1505,13 @@ def get_movement_preview(state_data):
                 tile_symbol = grid[new_y_idx][new_x_idx]
                 
                 # Determine if movement is blocked
-                is_blocked = tile_symbol in ['#', 'W']  # Walls and water block movement
+                # Walls (#) and Water (W) block movement - doors (D) and stairs (S) are walkable
+                is_blocked = tile_symbol in ['#', 'W']
                 
                 # SPECIAL CASE: If player is standing on stairs/door, don't block the warp direction
                 # Stairs and doors often require moving in a specific direction to activate
-                if current_tile_symbol in ['S', 'D']:
+                # Use actual_tile_under_player since grid shows 'P' not 'D'/'S'
+                if actual_tile_under_player in ['S', 'D']:
                     # When on stairs/doors, typically you need to move forward to activate them
                     # Don't block any direction when on these tiles to allow proper navigation
                     # This ensures the agent can properly use warps/doors even if the destination
@@ -1532,7 +1546,7 @@ def get_movement_preview(state_data):
                 
                 # Create human-readable description
                 # Check if we're overriding blocking due to being on stairs/door
-                is_override = current_tile_symbol in ['S', 'D'] and not is_blocked and tile_symbol in ['#', 'W']
+                is_override = actual_tile_under_player in ['S', 'D'] and not is_blocked and tile_symbol in ['#', 'W']
                 
                 if is_override:
                     # We're on stairs/door and this normally blocked tile is walkable
@@ -1633,11 +1647,11 @@ def astar_pathfind(grid, start_pos, goal_pos):
     start_x, start_y = start_pos
     goal_x, goal_y = goal_pos
     
-    # Check if goal is walkable
+    # Check if goal is walkable (allow doors and stairs as goals too)
     if goal_y >= len(grid) or goal_x >= len(grid[goal_y]):
         return None
     goal_tile = grid[goal_y][goal_x]
-    if goal_tile not in ['.', '~', 'P']:
+    if goal_tile not in ['.', '~', 'P', 'D', 'S']:
         return None
     
     # A* data structures
@@ -1691,9 +1705,9 @@ def astar_pathfind(grid, start_pos, goal_pos):
             if ny < 0 or ny >= len(grid) or nx < 0 or nx >= len(grid[ny]):
                 continue
             
-            # Check walkability - only . and ~ are walkable
+            # Check walkability - allow walking through doors and stairs too
             tile = grid[ny][nx]
-            if tile not in ['.', '~', 'P']:
+            if tile not in ['.', '~', 'P', 'D', 'S']:
                 continue
             
             tentative_g = g_score[current] + 1
@@ -1726,25 +1740,25 @@ def find_directional_goal(grid, player_pos, direction):
         # Find most northern walkable point
         for y in range(len(grid)):
             for x in range(len(grid[y])):
-                if grid[y][x] in ['.', '~']:
+                if grid[y][x] in ['.', '~', 'D', 'S']:
                     return (x, y)
     elif direction == 'DOWN':
         # Find most southern walkable point
         for y in range(len(grid) - 1, -1, -1):
             for x in range(len(grid[y])):
-                if grid[y][x] in ['.', '~']:
+                if grid[y][x] in ['.', '~', 'D', 'S']:
                     return (x, y)
     elif direction == 'LEFT':
         # Find most western walkable point
         for x in range(len(grid[0])):
             for y in range(len(grid)):
-                if x < len(grid[y]) and grid[y][x] in ['.', '~']:
+                if x < len(grid[y]) and grid[y][x] in ['.', '~', 'D', 'S']:
                     return (x, y)
     elif direction == 'RIGHT':
         # Find most eastern walkable point
         for x in range(len(grid[0]) - 1, -1, -1):
             for y in range(len(grid)):
-                if x < len(grid[y]) and grid[y][x] in ['.', '~']:
+                if x < len(grid[y]) and grid[y][x] in ['.', '~', 'D', 'S']:
                     return (x, y)
     
     return None
