@@ -379,6 +379,39 @@ def _get_phase_6_suggested_action(state_data, current_location: str = None) -> s
     elif "MAP" in loc_upper or "WOOD" in loc_upper or "PETALBURG" in current_location:
         print(f"[PHASE 6 DEBUG] In Petalburg Woods, trying all directions")
         
+        # Check if there's an 'S' tile to the north (special tile = forest exit)
+        # If yes, go north and overshoot by 4 UPs
+        map_info = state_data.get('map', {})
+        raw_tiles = map_info.get('tiles', [])
+        player_data = state_data.get('player', {})
+        player_position = player_data.get('position', {})
+        player_y = int(player_position.get('y', 0))
+        
+        # Check for 'S' tiles north of player
+        s_tile_north = False
+        try:
+            for tile in raw_tiles:
+                # Tiles are in format [x, y, tile_type, ...]
+                if isinstance(tile, (list, tuple)) and len(tile) >= 3:
+                    tile_x, tile_y, tile_type = tile[0], tile[1], tile[2]
+                    if tile_type == 'S' and tile_y > player_y:
+                        s_tile_north = True
+                        print(f"[PHASE 6 DEBUG] Found 'S' tile to the north at {tile_x}, {tile_y}")
+                        break
+                elif isinstance(tile, dict):
+                    if tile.get('type') == 'S' and tile.get('y', 0) > player_y:
+                        s_tile_north = True
+                        print(f"[PHASE 6 DEBUG] Found 'S' tile to the north at {tile.get('x')}, {tile.get('y')}")
+                        break
+        except Exception as e:
+            print(f"[PHASE 6 DEBUG] Error checking for 'S' tiles: {e}")
+            s_tile_north = False
+        
+        if s_tile_north:
+            # Overshoot by 4 UPs to exit the forest
+            print(f"[PHASE 6 DEBUG] 'S' tile detected, overshooting north by 4")
+            return "\nSuggested action: UP, UP, UP, UP, A"
+        
         # Try north first - this is the main direction through the woods
         north_seq = _get_full_path_to_direction(state_data, 'UP', current_location)
         if north_seq and len(north_seq) > 0:
@@ -390,27 +423,19 @@ def _get_phase_6_suggested_action(state_data, current_location: str = None) -> s
         print(f"[PHASE 6 DEBUG] North blocked, trying EAST")
         east_seq = _get_full_path_to_direction(state_data, 'RIGHT', current_location)
         if east_seq and len(east_seq) > 0:
-            # Count how many RIGHT moves in the path
-            right_count = east_seq.count('RIGHT')
-            if right_count > 0:
-                # Multiply horizontal movement by 3x to escape local minimums
-                east_seq = ['RIGHT'] * (right_count * 3)
-                print(f"[PHASE 6 DEBUG] Using EAST path (3x multiplied): {east_seq}")
-                east_seq.append('A')
-                return f"\nSuggested action: {', '.join(east_seq)}"
+            # Use the ACTUAL A* path, not just direction spam
+            print(f"[PHASE 6 DEBUG] Using EAST A* path: {east_seq}")
+            east_seq.append('A')
+            return f"\nSuggested action: {', '.join(east_seq)}"
         
         # East blocked, try west
         print(f"[PHASE 6 DEBUG] East blocked, trying WEST")
         west_seq = _get_full_path_to_direction(state_data, 'LEFT', current_location)
         if west_seq and len(west_seq) > 0:
-            # Count how many LEFT moves in the path
-            left_count = west_seq.count('LEFT')
-            if left_count > 0:
-                # Multiply horizontal movement by 3x to escape local minimums
-                west_seq = ['LEFT'] * (left_count * 3)
-                print(f"[PHASE 6 DEBUG] Using WEST path (3x multiplied): {west_seq}")
-                west_seq.append('A')
-                return f"\nSuggested action: {', '.join(west_seq)}"
+            # Use the ACTUAL A* path, not just direction spam
+            print(f"[PHASE 6 DEBUG] Using WEST A* path: {west_seq}")
+            west_seq.append('A')
+            return f"\nSuggested action: {', '.join(west_seq)}"
         
         # Last resort - go south (backwards)
         print(f"[PHASE 6 DEBUG] All forward directions blocked, trying SOUTH")
@@ -435,37 +460,26 @@ def _get_phase_6_suggested_action(state_data, current_location: str = None) -> s
             stairs_path.append('A')
             return f"\nSuggested action: {', '.join(stairs_path)}"
         
-        print(f"[PHASE 6 DEBUG] No stairs found, trying both NORTH and WEST paths")
+        print(f"[PHASE 6 DEBUG] No stairs found, trying EAST first, then NORTH")
         
-        # Get both paths
+        # Priority 1: EAST
+        east_seq = _get_full_path_to_direction(state_data, 'RIGHT', current_location)
+        if east_seq and len(east_seq) > 0:
+            print(f"[PHASE 6 DEBUG] Using EAST path: {east_seq}")
+            east_seq.append('A')
+            return f"\nSuggested action: {', '.join(east_seq)}"
+        
+        # Priority 2: NORTH
+        print(f"[PHASE 6 DEBUG] EAST blocked, trying NORTH")
         north_seq = _get_route_104_north_path(state_data, current_location)
-        west_seq = _get_petalburg_west_path(state_data, current_location)
-        
-        north_len = len(north_seq) if north_seq else 0
-        west_len = len(west_seq) if west_seq else 0
-        
-        print(f"[PHASE 6 DEBUG] North path length: {north_len}, West path length: {west_len}")
-        
-        # Pick whichever path is LONGER (makes more progress)
-        if west_len > north_len:
-            # West makes more progress - use it
-            print(f"[PHASE 6 DEBUG] West path is longer, using WEST")
-            west_seq.append('A')
-            return f"\nSuggested action: {', '.join(west_seq)}"
-        elif north_len > 0:
-            # North path exists and is longer/equal - use it
-            print(f"[PHASE 6 DEBUG] North path is longer/equal, using NORTH")
+        if north_seq and len(north_seq) > 0:
+            print(f"[PHASE 6 DEBUG] Using NORTH path: {north_seq}")
             north_seq.append('A')
             return f"\nSuggested action: {', '.join(north_seq)}"
-        elif west_len > 0:
-            # Only west path exists
-            print(f"[PHASE 6 DEBUG] Only west path exists, using WEST")
-            west_seq.append('A')
-            return f"\nSuggested action: {', '.join(west_seq)}"
-        else:
-            # No paths found - fallback
-            print(f"[PHASE 6 DEBUG] No paths found, using fallback")
-            return "\nSuggested action: DOWN, A"
+        
+        # Fallback
+        print(f"[PHASE 6 DEBUG] No paths found, using fallback RIGHT")
+        return "\nSuggested action: RIGHT, A"
     
     return ""
 
