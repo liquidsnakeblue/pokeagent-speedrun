@@ -1038,15 +1038,8 @@
                 <span class="panel-title">Agent Brain</span>
                 <span class="panel-badge" id="agent-status">IDLE</span>
             </div>
-            <div class="left-scroll" id="left-scroll">
-                <!-- Agent output text -->
-                <div id="agent-messages"></div>
-
-                <div class="thinking-indicator" id="thinking-indicator">
-                    <div class="thinking-dots"><span></span><span></span><span></span></div>
-                    <span>Agent is thinking...</span>
-                </div>
-
+            <!-- Fixed cards at top -->
+            <div style="flex-shrink:0; display:flex; flex-direction:column; gap:8px; padding:0 12px 8px 12px;">
                 <!-- Token usage card -->
                 <div class="token-card">
                     <div class="token-header">
@@ -1080,6 +1073,16 @@
                     <div class="keypress-chips" id="keypress-chips">
                         <span class="no-data">Waiting for actions...</span>
                     </div>
+                </div>
+            </div>
+
+            <!-- Scrolling message feed: newest at bottom, old scrolls up -->
+            <div class="left-scroll" id="left-scroll">
+                <div id="agent-messages"></div>
+
+                <div class="thinking-indicator" id="thinking-indicator">
+                    <div class="thinking-dots"><span></span><span></span><span></span></div>
+                    <span>Agent is thinking...</span>
                 </div>
             </div>
         </div>
@@ -1708,16 +1711,47 @@
                 const isVision = msgType.includes('vision') || msgType.includes('split_vision');
 
                 if (isReasoning) {
-                    // Put reasoning in the dedicated reasoning card
-                    lastReasoningText = responseText;
-                    // Highlight coordinates like (6, 4) in amber
-                    const highlighted = escHtml(responseText).replace(
+                    // Extract REASONING section from the structured response
+                    const reasoningMatch = responseText.match(/REASONING:\s*([\s\S]*?)(?=\nACTION:|$)/i);
+                    const parsedReasoning = reasoningMatch ? reasoningMatch[1].trim() : responseText.trim();
+
+                    // Update the dedicated reasoning card
+                    lastReasoningText = parsedReasoning;
+                    const highlighted = escHtml(parsedReasoning).replace(
                         /\((\d+),\s*(\d+)\)/g,
                         '<span class="coord-highlight">($1, $2)</span>'
                     );
                     reasoningDiv.innerHTML = highlighted;
+
+                    // Extract ACTION section for the key press card
+                    const actionMatch = responseText.match(/ACTION:\s*([\s\S]*?)$/i);
+                    if (actionMatch) {
+                        const actionText = actionMatch[1].trim();
+                        const chips = document.getElementById('keypress-chips');
+                        const actions = actionText.split(/[,\s]+/).filter(a => ['A','B','UP','DOWN','LEFT','RIGHT','START','SELECT'].includes(a.toUpperCase()));
+                        if (actions.length > 0) {
+                            chips.innerHTML = actions.map((a, i) => `<span class="key-chip${i === actions.length - 1 ? ' latest' : ''}">${a.toUpperCase()}</span>`).join('');
+                        }
+                    }
+
+                    // Also add reasoning to the scrolling feed as the agent's decision
+                    const divider = document.createElement('div');
+                    divider.className = 'agent-step-divider';
+                    divider.innerHTML = `Step ${data.step} &middot; Reasoning &middot; ${(data.duration || 0).toFixed(1)}s`;
+                    messagesDiv.appendChild(divider);
+
+                    const textBlock = document.createElement('div');
+                    textBlock.className = 'agent-text-block';
+                    textBlock.style.borderLeft = '3px solid var(--accent-purple, #ab47bc)';
+                    textBlock.style.paddingLeft = '12px';
+                    textBlock.textContent = parsedReasoning;
+                    messagesDiv.appendChild(textBlock);
+
+                    scrollContainer.scrollTop = scrollContainer.scrollHeight;
                 } else if (isVision) {
-                    // Vision messages get a styled card with parsed sections
+                    // Vision messages: extract just the Summary section for display
+                    const summary = extractVisionSummary(responseText);
+
                     const divider = document.createElement('div');
                     divider.className = 'agent-step-divider';
                     divider.innerHTML = `Step ${data.step} &middot; Vision &middot; ${(data.duration || 0).toFixed(1)}s`;
@@ -1725,7 +1759,12 @@
 
                     const visionCard = document.createElement('div');
                     visionCard.className = 'vision-card';
-                    visionCard.innerHTML = formatVisionOutput(responseText);
+                    let body = escHtml(summary);
+                    // Style inline markdown
+                    body = body.replace(/\*\*([^*]+?)\*\*/g, '<strong>$1</strong>');
+                    body = body.replace(/\*([^*]+?)\*/g, '<em>$1</em>');
+                    body = body.replace(/`([^`]+?)`/g, '<code style="color:var(--accent-amber);background:rgba(255,183,77,0.1);padding:1px 4px;border-radius:3px">$1</code>');
+                    visionCard.innerHTML = `<div class="vision-section"><span class="vision-section-header">VISION</span><span class="vision-section-body">${body}</span></div>`;
                     messagesDiv.appendChild(visionCard);
 
                     thinkingIndicator.style.display = 'flex';
@@ -1785,30 +1824,98 @@
         return div.innerHTML;
     }
 
+    function extractVisionSummary(text) {
+        // Extract a SHORT summary from the vision output for the dashboard feed.
+        // Full detail goes to the reasoner; we just want 1-2 sentences here.
+        const clean = text.replace(/\*\*/g, '').replace(/\*/g, '');
+
+        // Try markdown headers: ### Summary, ### Conclusion
+        let match = clean.match(/###\s*(?:Summary|Conclusion|Overview)\s*\n([\s\S]*?)(?=\n###|\n---|\s*$)/i);
+        if (match) {
+            // Take just the first sentence or two
+            return trimToSentences(match[1].trim(), 2);
+        }
+
+        // Try plain headers: SUMMARY: or KEY DETAILS:
+        match = clean.match(/(?:SUMMARY|CONCLUSION|KEY DETAILS):\s*([\s\S]*?)(?=\n[A-Z][A-Z ]+:|\n---|\s*$)/i);
+        if (match) {
+            return trimToSentences(match[1].trim(), 2);
+        }
+
+        // Try SCREEN TYPE section as fallback (usually most concise)
+        match = clean.match(/(?:###\s*)?SCREEN\s*TYPE[:\s]*([\s\S]*?)(?=\n###|\n[A-Z][A-Z ]+:|\n---)/i);
+        if (match) {
+            return trimToSentences(match[1].trim(), 2);
+        }
+
+        // Last resort: first 2 sentences of the whole thing
+        return trimToSentences(clean.trim(), 2);
+    }
+
+    function trimToSentences(text, maxSentences) {
+        // Collapse to single line, strip markdown cruft
+        const flat = text.replace(/\n/g, ' ').replace(/\s+/g, ' ').replace(/^[-–—*#\s]+/, '').trim();
+        // Split on sentence endings
+        const sentences = flat.match(/[^.!?]+[.!?]+/g);
+        if (sentences && sentences.length > 0) {
+            const result = sentences.slice(0, maxSentences).join('').trim();
+            return result.length > 180 ? result.substring(0, 180).replace(/\s+\S*$/, '') + '...' : result;
+        }
+        // No sentence breaks — hard truncate
+        return flat.length > 150 ? flat.substring(0, 150).replace(/\s+\S*$/, '') + '...' : flat;
+    }
+
     function formatVisionOutput(text) {
-        // Split by section headers (ALL-CAPS words followed by colon at start of line)
-        const sections = text.split(/\n(?=[A-Z][A-Z &\/]+:)/);
+        // Handle both formats:
+        //   ALL-CAPS HEADER: body text       (plain structured)
+        //   ### HEADER                       (markdown h3)
+        //   **bold text**                    (markdown bold)
+
+        // Normalize: strip leading/trailing whitespace, remove --- dividers
+        let cleaned = text.replace(/^---+$/gm, '').trim();
+
+        // Split by section headers: "### HEADER" or "ALL-CAPS WORDS:"
+        const sections = cleaned.split(/\n(?=###\s+|[A-Z][A-Z &\/]+:)/);
         let html = '';
+
         for (const section of sections) {
             const trimmed = section.trim();
-            if (!trimmed) continue;
-            const match = trimmed.match(/^([A-Z][A-Z &\/]+):\s*([\s\S]*)/);
+            if (!trimmed || trimmed === '---') continue;
+
+            // Try markdown h3: ### HEADER
+            let match = trimmed.match(/^###\s+(.+?)\s*\n([\s\S]*)/);
+            if (!match) {
+                // Try ALL-CAPS: HEADER: body
+                match = trimmed.match(/^([A-Z][A-Z &\/]+):\s*([\s\S]*)/);
+            }
+
             if (match) {
-                const header = match[1].trim();
+                const header = match[1].replace(/\*\*/g, '').trim();
                 let body = escHtml(match[2].trim());
-                // Highlight coordinates like (6, 4) in amber
+                // Convert **bold** markdown
+                body = body.replace(/\*\*([^*]+?)\*\*/g, '<strong>$1</strong>');
+                // Convert `code` markdown
+                body = body.replace(/`([^`]+?)`/g, '<code style="color:var(--accent-amber);background:rgba(255,183,77,0.1);padding:1px 4px;border-radius:3px">$1</code>');
+                // Highlight coordinates
                 body = body.replace(
                     /\((\d+),\s*(\d+)\)/g,
                     '<span class="coord-highlight">($1, $2)</span>'
                 );
-                // Bold quoted text
-                body = body.replace(
-                    /&quot;([^&]*?)&quot;/g,
-                    '<strong>&quot;$1&quot;</strong>'
-                );
+                // Convert - list items to styled bullets
+                body = body.replace(/\n- /g, '\n  \u2022 ');
+                // Convert *italic* markdown
+                body = body.replace(/\*([^*]+?)\*/g, '<em>$1</em>');
+
                 html += `<div class="vision-section">`;
                 html += `<span class="vision-section-header">${escHtml(header)}</span>`;
                 html += `<span class="vision-section-body">${body}</span>`;
+                html += `</div>`;
+            } else if (trimmed.toLowerCase().startsWith('summary')) {
+                // Handle "Summary" section without strict caps
+                const summaryBody = escHtml(trimmed.replace(/^summary\s*/i, '').trim());
+                html += `<div class="vision-section">`;
+                html += `<span class="vision-section-header">SUMMARY</span>`;
+                html += `<span class="vision-section-body">${summaryBody}</span>`;
                 html += `</div>`;
             } else {
                 html += `<div class="vision-section-body">${escHtml(trimmed)}</div>`;

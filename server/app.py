@@ -1243,9 +1243,11 @@ async def stream_agent_thinking():
             # Send initial connection message
             yield f"data: {json.dumps({'status': 'connected', 'timestamp': time.time()})}\n\n"
             
-            # On startup, mark all existing interactions as "sent" to avoid flooding with old messages
-            # We only want to stream NEW interactions from this point forward
+            # On startup, collect all existing interactions.
+            # Send the LAST few so a page refresh shows recent activity,
+            # then mark the rest as "already sent".
             try:
+                all_existing = []
                 log_files = sorted(glob.glob("llm_logs/llm_log_*.jsonl"))
                 for log_file in log_files:
                     if os.path.exists(log_file):
@@ -1256,10 +1258,37 @@ async def stream_agent_thinking():
                                     if entry.get("type") == "interaction":
                                         timestamp = entry.get("timestamp", "")
                                         if timestamp:
-                                            sent_timestamps.add(timestamp)
+                                            all_existing.append({
+                                                "type": entry.get("interaction_type", "unknown"),
+                                                "response": entry.get("response", ""),
+                                                "duration": entry.get("duration", 0),
+                                                "timestamp": timestamp
+                                            })
                                 except:
                                     continue
-                logger.info(f"SSE: Marked {len(sent_timestamps)} existing interactions as already sent")
+
+                # Mark all but the last 4 as already sent (show ~2 recent steps: vision+reasoning each)
+                replay_count = min(4, len(all_existing))
+                for item in all_existing[:-replay_count] if replay_count > 0 else all_existing:
+                    sent_timestamps.add(item["timestamp"])
+
+                # Send the last few as replay
+                replay_items = all_existing[-replay_count:] if replay_count > 0 else []
+                with step_lock:
+                    current_step = agent_step_count
+                for interaction in replay_items:
+                    event_data = {
+                        "step": current_step,
+                        "type": interaction.get("type", "unknown"),
+                        "response": interaction.get("response", ""),
+                        "duration": interaction.get("duration", 0),
+                        "timestamp": interaction.get("timestamp", ""),
+                        "is_new": True
+                    }
+                    yield f"data: {json.dumps(event_data)}\n\n"
+                    sent_timestamps.add(interaction["timestamp"])
+
+                logger.info(f"SSE: Replayed {replay_count} recent interactions, marked {len(sent_timestamps) - replay_count} as old")
             except Exception as init_e:
                 logger.warning(f"SSE: Error initializing sent timestamps: {init_e}")
             
