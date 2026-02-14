@@ -821,13 +821,125 @@ class SplitBackend(VLMBackend):
     - Reasoning model: text-only, produces game actions
     """
 
-    VISION_PROMPT = (
-        "Describe this Pokemon Emerald game screenshot concisely. Report:\n"
-        "1. SCREEN TYPE: overworld / battle / dialogue / menu / transition / title\n"
-        "2. DIALOGUE: If a dialogue box is visible, transcribe its exact text. Otherwise write \"none\".\n"
-        "3. KEY DETAILS: Notable visual elements (NPCs nearby, items, terrain) in 1-2 sentences.\n"
-        "Keep your response under 100 words total."
+    # ── Context-aware vision prompts ──────────────────────────────────
+
+    VISION_PROMPT_TITLE = (
+        "Analyze this Pokemon Emerald title/menu screen in detail.\n\n"
+        "SCREEN TYPE: Identify exactly what screen this is (title screen, "
+        "name input keyboard, gender select, intro cutscene, professor speech, "
+        "new game/continue menu, etc.)\n\n"
+        "MENU STATE: List ALL visible menu options or buttons. "
+        "Indicate which option is currently HIGHLIGHTED or SELECTED by the cursor. "
+        "Report the cursor position precisely.\n\n"
+        "TEXT INPUT: If this is a name input screen, report:\n"
+        "  - The current name entered so far (text in the name field)\n"
+        "  - The character grid layout visible\n"
+        "  - Which character the cursor is currently highlighting\n"
+        "  - The position of special buttons (BACK, OK, END, etc.)\n\n"
+        "DIALOGUE: If any dialogue or instruction text is visible, transcribe it EXACTLY "
+        "character by character. Include the speaker name if shown.\n\n"
+        "VISUAL CONTEXT: Describe any character sprites, professor sprites, Pokemon sprites, "
+        "backgrounds, or animations visible."
     )
+
+    VISION_PROMPT_BATTLE = (
+        "Analyze this Pokemon Emerald battle screen in detail.\n\n"
+        "BATTLE PHASE: Identify the current phase:\n"
+        "  - Action selection (FIGHT/BAG/POKEMON/RUN menu visible)\n"
+        "  - Move selection (4 moves listed)\n"
+        "  - Attack animation playing\n"
+        "  - Damage/effect text displaying\n"
+        "  - Pokemon fainting\n"
+        "  - Experience/level up screen\n"
+        "  - Pokemon switch prompt\n"
+        "  - Wild pokemon catch sequence\n"
+        "  - New move learning prompt\n\n"
+        "MENU STATE: If a menu is visible:\n"
+        "  - List ALL visible options in order\n"
+        "  - Which option has the selection cursor/highlight — be PRECISE\n"
+        "  - For move selection: name each move and mark which is highlighted\n\n"
+        "HP BARS: Describe the visual HP bar states:\n"
+        "  - Player's Pokemon: approximate fill (full/high/half/low/critical/empty) and bar color (green/yellow/red)\n"
+        "  - Opponent's Pokemon: approximate fill and bar color\n\n"
+        "DIALOGUE: If any text box is showing, transcribe it EXACTLY. "
+        "This includes effectiveness messages, damage text, status changes, \"What will X do?\" prompts.\n\n"
+        "SPRITES: Note visual details about Pokemon sprites "
+        "(status indicators like PSN/BRN/SLP icons, fainted, shiny sparkle)."
+    )
+
+    VISION_PROMPT_OVERWORLD = (
+        "Analyze this Pokemon Emerald overworld screen in detail.\n\n"
+        "ENVIRONMENT: Describe the setting — indoor/outdoor, terrain type "
+        "(town, route, cave, building interior, Pokemon Center, Mart, gym, etc.)\n\n"
+        "PLAYER: Describe the player character:\n"
+        "  - Facing direction (up, down, left, right)\n"
+        "  - Any interaction indicators (! or ? bubbles)\n"
+        "  - Is the player on special terrain (grass, water, sand, etc.)?\n\n"
+        "NPCS & OBJECTS: List ALL visible characters and interactive objects:\n"
+        "  - For each NPC: position relative to player "
+        "(e.g., '2 tiles north', 'directly east'), appearance, "
+        "whether they block a path\n"
+        "  - Signs, items on ground, Pokeballs, cut trees, strength boulders\n"
+        "  - PC, healing machine, shop counter, etc.\n\n"
+        "NAVIGATION: Identify visible pathways, doors, stairs, and exits:\n"
+        "  - Which directions have open paths vs walls/obstacles\n"
+        "  - Door/building entrances and their positions relative to player\n"
+        "  - Ledges and which direction they can be jumped\n"
+        "  - Tall grass patches\n"
+        "  - Staircase locations\n\n"
+        "DIALOGUE: If a dialogue box is visible, transcribe it EXACTLY.\n\n"
+        "OVERLAYS: Note any screen overlays — route name banners, "
+        "weather effects, map transition text."
+    )
+
+    VISION_PROMPT_DIALOGUE = (
+        "Analyze this Pokemon Emerald dialogue screen in detail.\n\n"
+        "DIALOGUE TEXT: Transcribe the EXACT text in the dialogue box, "
+        "character by character. Include line breaks where they appear. "
+        "Spell character names exactly as shown.\n\n"
+        "SPEAKER: Who is speaking? (NPC name, sign, system message, narrator)\n\n"
+        "DIALOGUE TYPE: Identify the type:\n"
+        "  - NPC conversation\n"
+        "  - Sign/notice text\n"
+        "  - System message\n"
+        "  - Yes/No choice prompt\n"
+        "  - Multiple choice prompt\n"
+        "  - Item received notification\n\n"
+        "CHOICES: If this is a choice dialogue:\n"
+        "  - List ALL choices visible\n"
+        "  - Which choice is currently HIGHLIGHTED by the cursor\n\n"
+        "CONTINUATION: Is there a flashing arrow/triangle at bottom-right "
+        "indicating more text to come?\n\n"
+        "BACKGROUND: Briefly describe what is visible behind the dialogue box."
+    )
+
+    VISION_PROMPT_MENU = (
+        "Analyze this Pokemon Emerald menu screen in detail.\n\n"
+        "MENU TYPE: Identify the menu (start menu, bag, party summary, pokedex, "
+        "Pokemon summary, shop buy/sell, PC storage, options, save, etc.)\n\n"
+        "MENU ITEMS: List ALL visible menu options/items in order.\n"
+        "  - Mark which item has the selection cursor/highlight with [>]\n"
+        "  - For the bag: list visible items with quantities\n"
+        "  - For party: list Pokemon with visible HP bars\n"
+        "  - For shops: list items with prices\n\n"
+        "SUBMENU: If a submenu or detail panel is open:\n"
+        "  - What information is displayed\n"
+        "  - Stats, descriptions, or move details shown\n"
+        "  - Available sub-actions (USE, GIVE, TOSS, CANCEL, etc.) with cursor position\n\n"
+        "TEXT: Transcribe any descriptive text or instructions shown.\n\n"
+        "SCROLL: Note any scroll indicators (arrows above/below list, page numbers)."
+    )
+
+    # Fallback for unknown context
+    VISION_PROMPT_DEFAULT = VISION_PROMPT_OVERWORLD
+
+    VISION_PROMPTS = {
+        "title": VISION_PROMPT_TITLE,
+        "battle": VISION_PROMPT_BATTLE,
+        "overworld": VISION_PROMPT_OVERWORLD,
+        "dialogue": VISION_PROMPT_DIALOGUE,
+        "menu": VISION_PROMPT_MENU,
+    }
 
     def __init__(self, model_name: str, **kwargs):
         try:
@@ -860,6 +972,24 @@ class SplitBackend(VLMBackend):
         logger.info(f"SplitBackend initialized:")
         logger.info(f"  Vision: {self.vision_model} @ {vision_url}")
         logger.info(f"  Reasoning: {self.reasoning_model} @ {reasoning_url}")
+
+    @staticmethod
+    def _detect_context_from_prompt(text: str) -> str:
+        """Extract game context from the text prompt to select appropriate vision prompt."""
+        text_lower = text.lower()
+        if "context: battle" in text_lower:
+            return "battle"
+        if "context: title" in text_lower:
+            return "title"
+        if "context: dialogue" in text_lower:
+            return "dialogue"
+        if "context: menu" in text_lower:
+            return "menu"
+        if "=== battle mode ===" in text_lower:
+            return "battle"
+        if "title_sequence" in text_lower:
+            return "title"
+        return "overworld"
 
     @staticmethod
     def _normalize_url(url: str) -> str:
@@ -906,9 +1036,13 @@ class SplitBackend(VLMBackend):
             max_tokens=self.reasoning_max_tokens
         )
 
-    def _call_vision(self, img, module_name: str = "Unknown") -> str:
+    def _call_vision(self, img, module_name: str = "Unknown", context: str = "overworld") -> str:
         """Send image to vision model and get scene description."""
         start_time = time.time()
+
+        # Select context-appropriate vision prompt
+        vision_prompt = self.VISION_PROMPTS.get(context, self.VISION_PROMPT_DEFAULT)
+        logger.info(f"[{module_name}] Vision context: {context}")
 
         # Convert image to base64 PNG
         if hasattr(img, 'convert'):
@@ -925,7 +1059,7 @@ class SplitBackend(VLMBackend):
         messages = [{
             "role": "user",
             "content": [
-                {"type": "text", "text": self.VISION_PROMPT},
+                {"type": "text", "text": vision_prompt},
                 {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{image_base64}"}}
             ]
         }]
@@ -945,22 +1079,22 @@ class SplitBackend(VLMBackend):
 
             log_llm_interaction(
                 interaction_type=f"split_vision_{module_name}",
-                prompt=self.VISION_PROMPT,
+                prompt=vision_prompt,
                 response=description,
                 duration=duration,
-                metadata={"model": self.vision_model, "backend": "split_vision", "has_image": True, "token_usage": token_usage},
+                metadata={"model": self.vision_model, "backend": "split_vision", "has_image": True, "token_usage": token_usage, "context": context},
                 model_info={"model": self.vision_model, "backend": "split_vision"}
             )
-            logger.info(f"[{module_name}] SPLIT VISION ({duration:.2f}s): {description[:200]}")
+            logger.info(f"[{module_name}] SPLIT VISION [{context}] ({duration:.2f}s): {description[:200]}")
             return description
 
         except Exception as e:
             duration = time.time() - start_time
             log_llm_error(
                 interaction_type=f"split_vision_{module_name}",
-                prompt=self.VISION_PROMPT,
+                prompt=vision_prompt,
                 error=str(e),
-                metadata={"model": self.vision_model, "backend": "split_vision", "duration": duration}
+                metadata={"model": self.vision_model, "backend": "split_vision", "duration": duration, "context": context}
             )
             logger.error(f"SplitBackend vision call failed: {e}")
             raise
@@ -1009,17 +1143,26 @@ class SplitBackend(VLMBackend):
     def get_query(self, img: Union[Image.Image, np.ndarray], text: str, module_name: str = "Unknown") -> str:
         """Process image+text by splitting into vision description then reasoning.
 
-        1. Send frame to vision model -> get scene description
-        2. Prepend description to the text prompt
-        3. Send augmented text to reasoning model -> get action response
+        1. Detect game context from the text prompt
+        2. Send frame to vision model with context-appropriate prompt -> get scene description
+        3. Prepend description to the text prompt
+        4. Send augmented text to reasoning model -> get action response
         """
-        # Stage 1: Vision
-        description = self._call_vision(img, module_name)
+        # Stage 1: Detect context for vision prompt selection
+        context = self._detect_context_from_prompt(text)
 
-        # Stage 2: Augment prompt with vision description
-        augmented_prompt = f"VISUAL FRAME DESCRIPTION (from vision model):\n{description}\n\n---\n\n{text}"
+        # Stage 2: Vision with context-aware prompt
+        description = self._call_vision(img, module_name, context=context)
 
-        # Stage 3: Reasoning (text-only)
+        # Stage 3: Augment prompt with vision description
+        augmented_prompt = (
+            f"VISUAL FRAME ANALYSIS ({context.upper()} screen):\n"
+            f"{description}\n\n"
+            f"---\n\n"
+            f"{text}"
+        )
+
+        # Stage 4: Reasoning (text-only)
         return self._call_reasoning(augmented_prompt, module_name)
 
     def get_text_query(self, text: str, module_name: str = "Unknown") -> str:

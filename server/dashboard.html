@@ -363,6 +363,40 @@
             background: var(--border);
         }
 
+        /* Vision analysis card */
+        .vision-card {
+            background: var(--bg-card);
+            border: 1px solid rgba(102,187,106,0.25);
+            border-left: 3px solid var(--accent-green);
+            border-radius: var(--radius);
+            padding: 12px 16px;
+        }
+
+        .vision-section {
+            margin-bottom: 8px;
+        }
+
+        .vision-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .vision-section-header {
+            display: block;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--accent-green);
+            margin-bottom: 3px;
+        }
+
+        .vision-section-body {
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text-primary);
+        }
+
         /* Token usage card (inline style like reference) */
         .token-card {
             background: var(--bg-card);
@@ -1682,12 +1716,26 @@
                         '<span class="coord-highlight">($1, $2)</span>'
                     );
                     reasoningDiv.innerHTML = highlighted;
+                } else if (isVision) {
+                    // Vision messages get a styled card with parsed sections
+                    const divider = document.createElement('div');
+                    divider.className = 'agent-step-divider';
+                    divider.innerHTML = `Step ${data.step} &middot; Vision &middot; ${(data.duration || 0).toFixed(1)}s`;
+                    messagesDiv.appendChild(divider);
+
+                    const visionCard = document.createElement('div');
+                    visionCard.className = 'vision-card';
+                    visionCard.innerHTML = formatVisionOutput(responseText);
+                    messagesDiv.appendChild(visionCard);
+
+                    thinkingIndicator.style.display = 'flex';
+                    scrollContainer.scrollTop = scrollContainer.scrollHeight;
                 } else {
                     // All other messages go into the main output stream
                     // Step divider
                     const divider = document.createElement('div');
                     divider.className = 'agent-step-divider';
-                    const typeLabel = isVision ? 'Vision' : (data.type || 'Step');
+                    const typeLabel = data.type || 'Step';
                     divider.innerHTML = `Step ${data.step} &middot; ${typeLabel} &middot; ${(data.duration || 0).toFixed(2)}s`;
                     messagesDiv.appendChild(divider);
 
@@ -1735,6 +1783,38 @@
         const div = document.createElement('div');
         div.textContent = str || '';
         return div.innerHTML;
+    }
+
+    function formatVisionOutput(text) {
+        // Split by section headers (ALL-CAPS words followed by colon at start of line)
+        const sections = text.split(/\n(?=[A-Z][A-Z &\/]+:)/);
+        let html = '';
+        for (const section of sections) {
+            const trimmed = section.trim();
+            if (!trimmed) continue;
+            const match = trimmed.match(/^([A-Z][A-Z &\/]+):\s*([\s\S]*)/);
+            if (match) {
+                const header = match[1].trim();
+                let body = escHtml(match[2].trim());
+                // Highlight coordinates like (6, 4) in amber
+                body = body.replace(
+                    /\((\d+),\s*(\d+)\)/g,
+                    '<span class="coord-highlight">($1, $2)</span>'
+                );
+                // Bold quoted text
+                body = body.replace(
+                    /&quot;([^&]*?)&quot;/g,
+                    '<strong>&quot;$1&quot;</strong>'
+                );
+                html += `<div class="vision-section">`;
+                html += `<span class="vision-section-header">${escHtml(header)}</span>`;
+                html += `<span class="vision-section-body">${body}</span>`;
+                html += `</div>`;
+            } else {
+                html += `<div class="vision-section-body">${escHtml(trimmed)}</div>`;
+            }
+        }
+        return html || `<div class="vision-section-body">${escHtml(text)}</div>`;
     }
 
     // ─── INIT ───
