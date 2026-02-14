@@ -66,12 +66,15 @@ class OpenAIBackend(VLMBackend):
             raise ImportError("OpenAI package not found. Install with: pip install openai")
         
         self.model_name = model_name
-        self.api_key = os.getenv("OPENAI_API_KEY")
-        
-        if not self.api_key:
-            raise ValueError("Error: OpenAI API key is missing! Set OPENAI_API_KEY environment variable.")
-        
-        self.client = OpenAI(api_key=self.api_key)
+        self.api_key = os.getenv("OPENAI_API_KEY", "no-key")
+        self.base_url = os.getenv("OPENAI_BASE_URL")
+
+        client_kwargs = {"api_key": self.api_key}
+        if self.base_url:
+            client_kwargs["base_url"] = self.base_url
+            logger.info(f"OpenAI backend using custom base URL: {self.base_url}")
+
+        self.client = OpenAI(**client_kwargs)
         self.errors = (openai.RateLimitError,)
     
     @retry_with_exponential_backoff

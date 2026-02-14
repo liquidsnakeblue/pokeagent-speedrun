@@ -1687,7 +1687,9 @@
                 const responseText = data.response || '';
 
                 // Check if this is a reasoning/split_reasoning message
-                const isReasoning = msgType.includes('reasoning') || msgType.includes('split_reason');
+                // Also treat combined single-model responses (openai_*, gemini_*) as reasoning if they contain REASONING:/ACTION:
+                const hasReasoningFormat = /REASONING:/i.test(responseText) && /ACTION:/i.test(responseText);
+                const isReasoning = msgType.includes('reasoning') || msgType.includes('split_reason') || (!msgType.includes('vision') && hasReasoningFormat);
                 const isVision = msgType.includes('vision') || msgType.includes('split_vision');
 
                 if (isReasoning) {
