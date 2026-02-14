@@ -35,7 +35,7 @@ def retry_with_exponential_backoff(
                 num_retries += 1
                 if num_retries > max_retries:
                     raise Exception(f"Maximum number of retries ({max_retries}) exceeded.")
-                # Increase the delay with exponential factor and random jitter
+                logger.warning(f"Retry {num_retries}/{max_retries} for {func.__name__}: {e} (waiting {delay:.1f}s)")
                 delay *= exponential_base * (1 + jitter * random.random())
                 time.sleep(delay)
             except Exception as e:
