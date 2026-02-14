@@ -39,9 +39,15 @@ def get_phase_1_prompt(
         Complete formatted prompt string
     """
     # Phase 1 Milestones: GAME_RUNNING, PLAYER_NAME_SET, INTRO_CUTSCENE_COMPLETE
-    phase_intro = """🎮 PHASE 1: Your goal is to simply progress through thet title screen and name selection as fast as possible.
-    Spam A and Start "A, START" Until you're in the van (you have a map), when you're in the moving van just move right a few times, 
-    then spam A until the cutscene with mom is done."""
+    phase_intro = """🎮 PHASE 1: Your goal is to simply progress through the title screen and name selection as fast as possible.
+    Spam A and Start until you're in the van (you have a map), when you're in the moving van just move right a few times,
+    then spam A until the cutscene with mom is done.
+
+    OUTPUT MANY ACTIONS PER TURN! During title/menus/cutscenes, output 8-12 button presses at once to move quickly.
+    Example ACTION for title screens: A, A, A, START, A, A, A, A, A, A
+    Example ACTION for cutscene dialogue: A, A, A, A, A, A, A, A, A, A
+    Example ACTION for moving in van: RIGHT, RIGHT, RIGHT, RIGHT, DOWN
+    Do NOT output just a single button press — that wastes time!"""
     
     return build_base_prompt(
         phase_intro=phase_intro,

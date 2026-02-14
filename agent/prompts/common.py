@@ -166,7 +166,7 @@ REASONING:
 [One paragraph explaining what you see on screen, what your current goal is, and why you chose this action. Be specific about game elements you're reacting to.]
 
 ACTION:
-[Just the button presses, comma separated. Example: A, UP, A]
+[Just the button presses, comma separated. Output multiple actions per turn! Example: A, A, A, UP, A, RIGHT, A]
 """
 
 
