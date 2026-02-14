@@ -271,9 +271,11 @@ def build_base_prompt(
 """ if include_pathfinding_helper and pathfinding_helper else ""
     
     # Base introduction section
-    base_intro_section = """You are playing as the Protagonist in Pokemon Emerald. Progress quickly to the milestones by balancing exploration and exploitation of things you know, but have fun for the Twitch stream while you do it. 
-Based on the current game frame and state information, think through your next move and choose the best button action. 
+    base_intro_section = """You are playing as the Protagonist in Pokemon Emerald. Progress quickly to the milestones by balancing exploration and exploitation of things you know, but have fun for the Twitch stream while you do it.
+Based on the current game frame and state information, think through your next move and choose the best button action.
 If you notice that you are repeating the same action sequences over and over again, you definitely need to try something different since what you are doing is wrong! Try exploring different new areas or interacting with different NPCs if you are stuck.
+
+DIALOGUE RULE: If you see a dialogue box or text box on screen, ALWAYS press A repeatedly to advance through it. Output: A, A, A, A, A. Do not hesitate or try other buttons during dialogue — just spam A.
 
 """ if include_base_intro else ""
     
