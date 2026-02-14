@@ -879,7 +879,16 @@ class SimpleAgent:
             coords = self.get_player_coords(game_state)
             context = self.get_game_context(game_state)
             map_id = self.get_map_id(game_state)
-            
+
+            # Dialogue short-circuit: skip LLM entirely, just press A to advance
+            if context == "dialogue":
+                logger.info("💬 Dialogue detected — auto-pressing A to advance")
+                print("💬 Dialogue detected — skipping LLM, pressing A x5")
+                self.last_reasoning = "Dialogue detected on screen. Pressing A to advance."
+                actions = ["A", "A", "A", "A", "A"]
+                self.state.recent_actions.extend(actions)
+                return actions
+
             # Format the current state for LLM (includes movement preview)
             formatted_state = format_state_for_llm(game_state)
             
