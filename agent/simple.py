@@ -400,9 +400,14 @@ class SimpleAgent:
                 logger.debug(f"Detected battle context")
                 return "battle"
             
-            # Check if dialogue is active
-            dialogue_state = game_state.get("game", {}).get("dialogue", {})
-            if dialogue_state.get("active", False) or dialogue_state.get("text", "").strip():
+            # Check if dialogue is active (memory reader uses dialogue_detected + dialog_text + game_state="dialog")
+            game_info = game_state.get("game", {})
+            dialogue_detected = game_info.get("dialogue_detected", {})
+            dialog_text = game_info.get("dialog_text", "")
+            raw_game_state = game_info.get("game_state", "")
+            if (dialogue_detected.get("has_dialogue", False)
+                or (dialog_text and dialog_text.strip())
+                or raw_game_state == "dialog"):
                 return "dialogue"
             
             # Check if in menu (simplified detection)
