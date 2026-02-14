@@ -92,6 +92,7 @@ def run_multiprocess_client(server_port=8000, args=None):
     
     last_agent_time = time.time()
     step_count = 0
+    queue_empty_since = None  # Track when action queue first became empty
     
     # Initialize pygame if not headless
     if not headless and PYGAME_AVAILABLE:
@@ -328,6 +329,18 @@ def run_multiprocess_client(server_port=8000, args=None):
                         if queue_response.status_code == 200:
                             queue_status = queue_response.json()
                             if queue_status.get("queue_empty", False):
+                                # Track when queue first became empty
+                                if queue_empty_since is None:
+                                    queue_empty_since = current_time
+                                    print("⏳ Action queue empty, waiting 10s for game to settle...")
+
+                                # Wait 10 seconds after queue empties before taking screenshot
+                                if current_time - queue_empty_since < 10.0:
+                                    continue  # Skip this iteration, check again next loop
+
+                                # Reset tracker for next step
+                                queue_empty_since = None
+
                                 # Get state and process
                                 response = requests.get(f"{server_url}/state", timeout=5)
                                 if response.status_code == 200:
@@ -437,6 +450,9 @@ def run_multiprocess_client(server_port=8000, args=None):
                                                     print(f"🎮 Agent: {action} (server error: {response.status_code})")
                                             except requests.exceptions.RequestException as e:
                                                 print(f"🎮 Agent: {action} (connection error: {e})")
+                            else:
+                                # Queue still has actions, reset empty tracker
+                                queue_empty_since = None
                     except Exception as e:
                         print(f"❌ AUTO mode error: {e}")
                         import traceback
