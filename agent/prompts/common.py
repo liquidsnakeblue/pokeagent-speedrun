@@ -160,9 +160,13 @@ def get_response_structure() -> str:
     # Check MOVEMENT MEMORY for areas you've had trouble with before and plan your route accordingly.]
 
     return """
+Respond in EXACTLY this format:
 
-- NEVER GIVE ANY REASONING FOR YOUR ACTIONS! ONLY EVER RETURN THE ACTIONS U ARE TAKING.
-- EXAMPLE: DO NOT SAY "ACTIONS: UP, DOWN" JUST RETURN "UP, DOWN"
+REASONING:
+[One paragraph explaining what you see on screen, what your current goal is, and why you chose this action. Be specific about game elements you're reacting to.]
+
+ACTION:
+[Just the button presses, comma separated. Example: A, UP, A]
 """
 
 

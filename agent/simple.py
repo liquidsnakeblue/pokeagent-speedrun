@@ -151,6 +151,9 @@ class SimpleAgent:
         
         # Current phase for prompt selection (auto-updated based on milestones)
         self.current_phase = 1  # Will be auto-updated based on milestone completion
+
+        # Last reasoning from LLM response (for dashboard display)
+        self.last_reasoning = ""
         
         # Debug flag for prompt logging (set to True to see prompts in console)
         self.debug_prompts = True  # Set to True to enable prompt debugging
@@ -1038,6 +1041,9 @@ class SimpleAgent:
             # Extract action(s) from structured response
             actions, reasoning = self._parse_structured_response(response, game_state)
             
+            # Store reasoning for dashboard access
+            self.last_reasoning = reasoning or ""
+
             # Print parsed actions clearly
             print(f"✅ PARSED ACTIONS: {actions}")
             if reasoning:

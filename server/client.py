@@ -395,6 +395,7 @@ def run_multiprocess_client(server_port=8000, args=None):
                                                             agent_state_payload = {
                                                                 "step_counter": step_count,
                                                                 "phase": getattr(agent.agent_impl, 'current_phase', 1),
+                                                                "last_reasoning": getattr(agent.agent_impl, 'last_reasoning', ''),
                                                                 "active_objectives": [
                                                                     {"id": o.id, "description": o.description, "type": o.objective_type}
                                                                     for o in agent.agent_impl.get_active_objectives()

@@ -171,12 +171,12 @@
         }
 
         .badge-label {
-            font-size: 9px;
+            font-size: 10px;
             color: var(--text-dim);
-            margin-top: 3px;
+            margin-top: 4px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            font-weight: 500;
+            font-weight: 600;
         }
 
         .badge-node.earned .badge-label {
@@ -318,80 +318,276 @@
         }
 
         /* ─── LEFT: AGENT BRAIN ─── */
-        .agent-output {
+        .left-scroll {
             flex: 1;
             min-height: 0;
-        }
-
-        .agent-output .panel-body {
             overflow-y: auto;
-            padding: 12px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
         }
 
-        .agent-output .panel-body::-webkit-scrollbar { width: 4px; }
-        .agent-output .panel-body::-webkit-scrollbar-track { background: transparent; }
-        .agent-output .panel-body::-webkit-scrollbar-thumb { background: var(--text-dim); border-radius: 2px; }
+        .left-scroll::-webkit-scrollbar { width: 5px; }
+        .left-scroll::-webkit-scrollbar-track { background: transparent; }
+        .left-scroll::-webkit-scrollbar-thumb { background: var(--text-dim); border-radius: 3px; }
 
-        .llm-entry {
-            margin-bottom: 12px;
-            padding: 10px 12px;
-            background: var(--bg-inset);
-            border-radius: var(--radius);
-            border-left: 3px solid var(--text-dim);
-            font-size: 13px;
-            line-height: 1.6;
+        /* Agent output text */
+        .agent-text-block {
+            font-size: 15px;
+            line-height: 1.7;
             color: var(--text-primary);
             word-wrap: break-word;
             white-space: pre-wrap;
         }
 
-        .llm-entry.streaming {
-            border-left-color: var(--accent-amber);
-            background: rgba(255,183,77,0.05);
+        .agent-text-block.streaming {
+            border-left: 3px solid var(--accent-amber);
+            padding-left: 12px;
         }
 
-        .llm-entry.complete {
-            border-left-color: var(--accent-green);
-        }
-
-        .llm-step-label {
+        .agent-step-divider {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 8px 0 4px 0;
             font-family: 'JetBrains Mono', monospace;
             font-size: 11px;
+            color: var(--text-dim);
+        }
+
+        .agent-step-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        /* Token usage card (inline style like reference) */
+        .token-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            flex-shrink: 0;
+        }
+
+        .token-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .token-header-label {
+            font-size: 14px;
             font-weight: 600;
-            color: var(--accent-blue);
-            margin-bottom: 6px;
+            color: var(--text-primary);
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
-        .llm-duration {
-            font-weight: 400;
-            color: var(--text-dim);
-            font-size: 10px;
+        .token-header-label .icon {
+            color: var(--accent-amber);
         }
 
-        .llm-text {
+        .token-header-total {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 12px;
-            line-height: 1.7;
+            font-size: 13px;
             color: var(--text-secondary);
         }
 
+        .token-header-total strong {
+            color: var(--text-primary);
+            font-size: 16px;
+        }
+
+        .token-bar-track {
+            width: 100%;
+            height: 6px;
+            background: var(--bg-inset);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .token-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-blue), #29b6f6);
+            border-radius: 3px;
+            transition: width 0.6s ease;
+        }
+
+        .token-breakdown {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .token-breakdown .dot {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+
+        .dot-input { background: var(--accent-blue); }
+        .dot-output { background: var(--accent-green); }
+        .dot-reasoning { background: var(--accent-purple); }
+
+        .token-breakdown strong {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        /* Reasoning card */
+        .reasoning-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            flex-shrink: 0;
+        }
+
+        .reasoning-header {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .reasoning-header .icon {
+            color: var(--accent-purple);
+        }
+
+        .reasoning-text {
+            font-size: 15px;
+            line-height: 1.7;
+            color: var(--text-primary);
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+
+        .reasoning-text .coord-highlight {
+            color: var(--accent-amber);
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+        }
+
+        .no-reasoning {
+            color: var(--text-dim);
+            font-style: italic;
+            font-size: 13px;
+        }
+
+        /* Key press card */
+        .keypress-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            flex-shrink: 0;
+        }
+
+        .keypress-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .keypress-header-label {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .keypress-status {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .keypress-status.executing {
+            color: var(--accent-amber);
+        }
+
+        .keypress-status.idle {
+            color: var(--text-dim);
+        }
+
+        .status-spinner {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid transparent;
+            border-top-color: var(--accent-amber);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .keypress-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .key-chip {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 5px 14px;
+            border-radius: 5px;
+            background: var(--bg-inset);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            text-transform: uppercase;
+        }
+
+        .key-chip.latest {
+            background: var(--accent-blue-dim);
+            color: var(--accent-blue);
+            border-color: rgba(79,195,247,0.4);
+            box-shadow: 0 0 8px rgba(79,195,247,0.2);
+        }
+
+        /* Thinking indicator */
         .thinking-indicator {
             display: flex;
             align-items: center;
             gap: 8px;
-            padding: 12px 16px;
+            padding: 12px 0;
             color: var(--accent-amber);
-            font-size: 13px;
+            font-size: 14px;
             font-weight: 500;
         }
 
         .thinking-dots span {
             display: inline-block;
-            width: 5px;
-            height: 5px;
+            width: 6px;
+            height: 6px;
             border-radius: 50%;
             background: var(--accent-amber);
             animation: dot-pulse 1.4s infinite ease-in-out;
@@ -403,69 +599,6 @@
         @keyframes dot-pulse {
             0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
             40% { opacity: 1; transform: scale(1.1); }
-        }
-
-        /* Token usage */
-        .token-panel {
-            height: 80px;
-            flex-shrink: 0;
-        }
-
-        .token-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 8px;
-            padding: 10px 14px;
-            height: 100%;
-        }
-
-        .token-item {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background: var(--bg-card);
-            border-radius: var(--radius-sm);
-            padding: 6px;
-        }
-
-        .token-item .stat-value {
-            font-size: 14px;
-        }
-
-        /* Key presses */
-        .keypress-panel {
-            height: 100px;
-            flex-shrink: 0;
-        }
-
-        .keypress-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-            padding: 8px 14px;
-            overflow: hidden;
-            height: 100%;
-            align-content: flex-start;
-        }
-
-        .key-chip {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 11px;
-            font-weight: 600;
-            padding: 4px 10px;
-            border-radius: 4px;
-            background: var(--bg-card);
-            color: var(--text-secondary);
-            border: 1px solid var(--border);
-            transition: all 0.2s;
-        }
-
-        .key-chip.latest {
-            background: var(--accent-blue-dim);
-            color: var(--accent-blue);
-            border-color: rgba(79,195,247,0.4);
-            box-shadow: 0 0 8px rgba(79,195,247,0.2);
         }
 
         /* ─── CENTER: GAME VIEW ─── */
@@ -509,10 +642,10 @@
         .party-grid {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
             gap: 6px;
             padding: 8px 10px;
             height: 100%;
-            align-content: start;
         }
 
         .party-card {
@@ -531,8 +664,10 @@
         .party-card:hover { border-color: var(--border-accent); }
 
         .party-card.empty {
-            opacity: 0.3;
+            opacity: 0.25;
             border-style: dashed;
+            justify-content: center;
+            min-height: 60px;
         }
 
         .poke-sprite {
@@ -863,49 +998,55 @@
 
     <!-- LEFT COLUMN: Agent Brain -->
     <div class="column col-left">
-        <div class="panel agent-output" style="flex:1; min-height:0;">
+        <div class="panel" style="flex:1; min-height:0; display:flex; flex-direction:column;">
             <div class="panel-header">
                 <span class="panel-icon">&#9881;</span>
                 <span class="panel-title">Agent Brain</span>
                 <span class="panel-badge" id="agent-status">IDLE</span>
             </div>
-            <div class="panel-body" id="agent-thinking-body">
-                <div class="thinking-indicator" id="thinking-indicator" style="display:none;">
+            <div class="left-scroll" id="left-scroll">
+                <!-- Agent output text -->
+                <div id="agent-messages"></div>
+
+                <div class="thinking-indicator" id="thinking-indicator">
                     <div class="thinking-dots"><span></span><span></span><span></span></div>
                     <span>Agent is thinking...</span>
                 </div>
-                <div id="agent-messages"></div>
-            </div>
-        </div>
 
-        <div class="panel token-panel">
-            <div class="panel-header">
-                <span class="panel-icon">&#9670;</span>
-                <span class="panel-title">Token Usage</span>
-            </div>
-            <div class="token-grid">
-                <div class="token-item">
-                    <span class="stat-label">Total</span>
-                    <span class="stat-value tokens" id="tok-total">0</span>
+                <!-- Token usage card -->
+                <div class="token-card">
+                    <div class="token-header">
+                        <span class="token-header-label"><span class="icon">&#9889;</span> Token Usage</span>
+                        <span class="token-header-total">Total: <strong id="tok-total">0</strong></span>
+                    </div>
+                    <div class="token-bar-track">
+                        <div class="token-bar-fill" id="tok-bar-fill" style="width:0%"></div>
+                    </div>
+                    <div class="token-breakdown">
+                        <span><span class="dot dot-input"></span>Input: <strong id="tok-prompt">0</strong></span>
+                        <span><span class="dot dot-output"></span>Output: <strong id="tok-completion">0</strong></span>
+                        <span id="tok-reasoning-wrap" style="display:none;">(<span class="dot dot-reasoning"></span><strong id="tok-reasoning">0</strong> reasoning)</span>
+                    </div>
                 </div>
-                <div class="token-item">
-                    <span class="stat-label">Prompt</span>
-                    <span class="stat-value" id="tok-prompt">0</span>
-                </div>
-                <div class="token-item">
-                    <span class="stat-label">Completion</span>
-                    <span class="stat-value" id="tok-completion">0</span>
-                </div>
-            </div>
-        </div>
 
-        <div class="panel keypress-panel">
-            <div class="panel-header">
-                <span class="panel-icon">&#9654;</span>
-                <span class="panel-title">Key Presses</span>
-            </div>
-            <div class="keypress-row" id="keypress-row">
-                <span class="no-data">Waiting for actions...</span>
+                <!-- Reasoning card -->
+                <div class="reasoning-card">
+                    <div class="reasoning-header"><span class="icon">&#9881;</span> REASONING</div>
+                    <div class="reasoning-text" id="reasoning-text">
+                        <span class="no-reasoning">Waiting for reasoning output...</span>
+                    </div>
+                </div>
+
+                <!-- Key press card -->
+                <div class="keypress-card">
+                    <div class="keypress-header">
+                        <span class="keypress-header-label">&#9000; KEY PRESS</span>
+                        <span class="keypress-status idle" id="keypress-status">Idle</span>
+                    </div>
+                    <div class="keypress-chips" id="keypress-chips">
+                        <span class="no-data">Waiting for actions...</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -1208,9 +1349,16 @@
             document.getElementById('stat-tokens').textContent = formatNumber(m.total_tokens || 0);
             document.getElementById('stat-cost').textContent = `$${(m.total_cost || 0).toFixed(2)}`;
 
-            document.getElementById('tok-total').textContent = formatNumber(m.total_tokens || 0);
-            document.getElementById('tok-prompt').textContent = formatNumber(m.prompt_tokens || 0);
-            document.getElementById('tok-completion').textContent = formatNumber(m.completion_tokens || 0);
+            const total = m.total_tokens || 0;
+            const prompt = m.prompt_tokens || 0;
+            const completion = m.completion_tokens || 0;
+            document.getElementById('tok-total').textContent = total.toLocaleString();
+            document.getElementById('tok-prompt').textContent = prompt.toLocaleString();
+            document.getElementById('tok-completion').textContent = completion.toLocaleString();
+
+            // Token bar fill (prompt vs total ratio)
+            const barPct = total > 0 ? Math.round((prompt / total) * 100) : 0;
+            document.getElementById('tok-bar-fill').style.width = barPct + '%';
 
             // Timer init
             const isNew = m.total_llm_calls === 0 && m.total_actions === 0 && m.total_cost === 0;
@@ -1277,6 +1425,20 @@
 
             objBody.innerHTML = html;
             document.getElementById('obj-count').textContent = active.length;
+
+            // Update reasoning card from agent state (parsed from LLM response)
+            const reasoning = data.last_reasoning || '';
+            if (reasoning && reasoning !== lastReasoningText) {
+                lastReasoningText = reasoning;
+                const reasoningDiv = document.getElementById('reasoning-text');
+                // Strip "Reasoning: " prefix if present from the parsed format
+                let cleanReasoning = reasoning.replace(/^Reasoning:\s*/i, '');
+                const highlighted = escHtml(cleanReasoning).replace(
+                    /\((\d+),\s*(\d+)\)/g,
+                    '<span class="coord-highlight">($1, $2)</span>'
+                );
+                reasoningDiv.innerHTML = highlighted;
+            }
         } catch (e) { /* silent */ }
     }
 
@@ -1332,8 +1494,7 @@
                 </div>`;
             } else {
                 html += `<div class="party-card empty">
-                    <div class="poke-sprite" style="display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:24px;opacity:0.3;">+</div>
-                    <div class="poke-name" style="color:var(--text-dim);">Empty</div>
+                    <div style="color:var(--text-dim);font-size:20px;opacity:0.5;">+</div>
                 </div>`;
             }
         }
@@ -1432,19 +1593,36 @@
             if (sig === lastActionSig) return;
             lastActionSig = sig;
 
-            const row = document.getElementById('keypress-row');
+            const chips = document.getElementById('keypress-chips');
+            const status = document.getElementById('keypress-status');
             if (recent.length === 0) {
-                row.innerHTML = '<span class="no-data">Waiting for actions...</span>';
+                chips.innerHTML = '<span class="no-data">Waiting for actions...</span>';
+                status.className = 'keypress-status idle';
+                status.textContent = 'Idle';
                 return;
             }
+
+            // Check queue status for executing indicator
+            try {
+                const qr = await fetch(`${serverUrl}/queue_status`);
+                if (qr.ok) {
+                    const qs = await qr.json();
+                    if (!qs.queue_empty) {
+                        status.className = 'keypress-status executing';
+                        status.innerHTML = '<span class="status-spinner"></span> Executing';
+                    } else {
+                        status.className = 'keypress-status idle';
+                        status.textContent = 'Done';
+                    }
+                }
+            } catch(e) {}
 
             let html = '';
             recent.forEach((btn, i) => {
                 const isLatest = i === recent.length - 1;
-                const opacity = Math.max(0.3, 1.0 - ((recent.length - 1 - i) / Math.max(recent.length - 1, 1)) * 0.7);
-                html += `<span class="key-chip${isLatest ? ' latest' : ''}" style="opacity:${opacity}">${btn.button}</span>`;
+                html += `<span class="key-chip${isLatest ? ' latest' : ''}">${btn.button}</span>`;
             });
-            row.innerHTML = html;
+            chips.innerHTML = html;
         } catch (e) { /* silent */ }
     }
 
@@ -1461,11 +1639,14 @@
 
     // ─── AGENT THINKING (SSE) ───
     let streamSource = null;
+    let lastReasoningText = '';
 
     function initAgentStreaming() {
         const messagesDiv = document.getElementById('agent-messages');
         const thinkingIndicator = document.getElementById('thinking-indicator');
         const statusBadge = document.getElementById('agent-status');
+        const reasoningDiv = document.getElementById('reasoning-text');
+        const scrollContainer = document.getElementById('left-scroll');
 
         if (streamSource) streamSource.close();
 
@@ -1482,46 +1663,61 @@
                 if (data.error || data.heartbeat) return;
                 if (!data.is_new) return;
 
-                // Hide thinking indicator
                 thinkingIndicator.style.display = 'none';
                 statusBadge.textContent = 'ACTIVE';
 
-                // Create message entry
-                const entry = document.createElement('div');
-                entry.className = 'llm-entry streaming';
+                const msgType = (data.type || '').toLowerCase();
+                const responseText = data.response || '';
 
-                const stepLabel = document.createElement('div');
-                stepLabel.className = 'llm-step-label';
-                stepLabel.innerHTML = `Step ${data.step} <span class="llm-duration">${data.type} &middot; ${(data.duration || 0).toFixed(2)}s</span>`;
+                // Check if this is a reasoning/split_reasoning message
+                const isReasoning = msgType.includes('reasoning') || msgType.includes('split_reason');
+                const isVision = msgType.includes('vision') || msgType.includes('split_vision');
 
-                const textEl = document.createElement('div');
-                textEl.className = 'llm-text';
+                if (isReasoning) {
+                    // Put reasoning in the dedicated reasoning card
+                    lastReasoningText = responseText;
+                    // Highlight coordinates like (6, 4) in amber
+                    const highlighted = escHtml(responseText).replace(
+                        /\((\d+),\s*(\d+)\)/g,
+                        '<span class="coord-highlight">($1, $2)</span>'
+                    );
+                    reasoningDiv.innerHTML = highlighted;
+                } else {
+                    // All other messages go into the main output stream
+                    // Step divider
+                    const divider = document.createElement('div');
+                    divider.className = 'agent-step-divider';
+                    const typeLabel = isVision ? 'Vision' : (data.type || 'Step');
+                    divider.innerHTML = `Step ${data.step} &middot; ${typeLabel} &middot; ${(data.duration || 0).toFixed(2)}s`;
+                    messagesDiv.appendChild(divider);
 
-                entry.appendChild(stepLabel);
-                entry.appendChild(textEl);
-                messagesDiv.appendChild(entry);
+                    // Text block
+                    const textBlock = document.createElement('div');
+                    textBlock.className = 'agent-text-block streaming';
+                    messagesDiv.appendChild(textBlock);
 
-                // Word-by-word typing
-                const words = (data.response || '').split(/(\s+)/).filter(w => w.length > 0);
-                let wi = 0;
+                    // Word-by-word typing
+                    const words = responseText.split(/(\s+)/).filter(w => w.length > 0);
+                    let wi = 0;
 
-                function typeWord() {
-                    if (wi < words.length) {
-                        textEl.textContent += words[wi];
-                        wi++;
-                        messagesDiv.parentElement.scrollTop = messagesDiv.parentElement.scrollHeight;
-                        setTimeout(typeWord, words[wi - 1].trim() === '' ? 2 : 8);
-                    } else {
-                        entry.classList.remove('streaming');
-                        entry.classList.add('complete');
-                        thinkingIndicator.style.display = 'flex';
+                    function typeWord() {
+                        if (wi < words.length) {
+                            textBlock.textContent += words[wi];
+                            wi++;
+                            scrollContainer.scrollTop = scrollContainer.scrollHeight;
+                            setTimeout(typeWord, words[wi - 1].trim() === '' ? 1 : 6);
+                        } else {
+                            textBlock.classList.remove('streaming');
+                            thinkingIndicator.style.display = 'flex';
+                            scrollContainer.scrollTop = scrollContainer.scrollHeight;
+                        }
                     }
+
+                    typeWord();
                 }
 
-                typeWord();
-
-                // Keep max 30 messages
-                while (messagesDiv.children.length > 30) {
+                // Keep max 20 text blocks in agent messages
+                while (messagesDiv.children.length > 40) {
                     messagesDiv.removeChild(messagesDiv.firstChild);
                 }
 
