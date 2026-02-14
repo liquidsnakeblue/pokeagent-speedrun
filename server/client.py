@@ -383,7 +383,7 @@ def run_multiprocess_client(server_port=8000, args=None):
                                                     step_count += 1
                                                     print(f"🎮 Agent: {action} (sent successfully)")
                                                     print(f"🎮 Step {step_count}: {result['action']}")
-                                                    last_agent_time = current_time
+                                                    last_agent_time = time.time()  # Fresh timestamp, not stale current_time from before LLM call
                                                     
                                                     # Auto-save checkpoint after each step for persistence
                                                     try:
