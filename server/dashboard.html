@@ -1,0 +1,1569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1920, height=1080">
+    <title>Schuyler AI - Pokemon Emerald</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg-deep: #0a1118;
+            --bg-base: #0f1923;
+            --bg-panel: #1a2332;
+            --bg-card: #243447;
+            --bg-card-hover: #2c3f54;
+            --bg-inset: #0c1520;
+            --text-primary: #e8eaed;
+            --text-secondary: #8f9baa;
+            --text-dim: #5a6a7a;
+            --accent-blue: #4fc3f7;
+            --accent-blue-dim: rgba(79,195,247,0.15);
+            --accent-amber: #ffb74d;
+            --accent-amber-dim: rgba(255,183,77,0.12);
+            --accent-green: #66bb6a;
+            --accent-green-dim: rgba(102,187,106,0.15);
+            --accent-red: #ef5350;
+            --accent-red-dim: rgba(239,83,80,0.12);
+            --accent-purple: #b39ddb;
+            --border: rgba(79,195,247,0.1);
+            --border-accent: rgba(79,195,247,0.25);
+            --glow-blue: 0 0 20px rgba(79,195,247,0.15);
+            --radius: 8px;
+            --radius-sm: 5px;
+            --radius-lg: 12px;
+        }
+
+        html, body {
+            width: 1920px;
+            height: 1080px;
+            overflow: hidden;
+            background: var(--bg-deep);
+            color: var(--text-primary);
+            font-family: 'Outfit', -apple-system, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            background-image:
+                radial-gradient(ellipse 120% 60% at 20% 0%, rgba(79,195,247,0.04) 0%, transparent 70%),
+                radial-gradient(ellipse 80% 50% at 80% 100%, rgba(255,183,77,0.03) 0%, transparent 60%);
+        }
+
+        /* ─── HEADER ─── */
+        .header {
+            height: 62px;
+            background: var(--bg-panel);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            gap: 24px;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 10;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-blue), transparent);
+            opacity: 0.3;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        .logo-pokeball {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: linear-gradient(180deg, var(--accent-red) 48%, var(--bg-deep) 48%, var(--bg-deep) 52%, #eee 52%);
+            border: 2px solid var(--text-dim);
+            position: relative;
+        }
+
+        .logo-pokeball::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--bg-deep);
+            border: 2px solid var(--text-dim);
+        }
+
+        .logo-text {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-amber));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .phase-badge {
+            background: var(--accent-blue-dim);
+            border: 1px solid rgba(79,195,247,0.3);
+            color: var(--accent-blue);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 3px 10px;
+            border-radius: 20px;
+        }
+
+        /* Badge timeline */
+        .badge-timeline {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            margin: 0 auto;
+            flex-shrink: 0;
+        }
+
+        .badge-node {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            width: 64px;
+        }
+
+        .badge-icon {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+            border: 2px solid var(--text-dim);
+            background: var(--bg-card);
+            color: var(--text-dim);
+            transition: all 0.4s;
+            position: relative;
+            z-index: 2;
+        }
+
+        .badge-node.earned .badge-icon {
+            border-color: var(--accent-amber);
+            background: var(--accent-amber-dim);
+            color: var(--accent-amber);
+            box-shadow: 0 0 12px rgba(255,183,77,0.3);
+        }
+
+        .badge-label {
+            font-size: 9px;
+            color: var(--text-dim);
+            margin-top: 3px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+        }
+
+        .badge-node.earned .badge-label {
+            color: var(--accent-amber);
+        }
+
+        .badge-connector {
+            width: 20px;
+            height: 2px;
+            background: var(--text-dim);
+            opacity: 0.3;
+            flex-shrink: 0;
+            margin-top: -12px;
+        }
+
+        .badge-connector.active {
+            background: var(--accent-amber);
+            opacity: 0.7;
+        }
+
+        /* Stats boxes */
+        .header-stats {
+            display: flex;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+
+        .stat-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 4px 14px;
+            background: var(--bg-card);
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            min-width: 72px;
+        }
+
+        .stat-label {
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--text-dim);
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .stat-value.cost { color: var(--accent-amber); }
+        .stat-value.tokens { color: var(--accent-blue); }
+
+        /* Connection indicator */
+        .connection-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-green);
+            box-shadow: 0 0 8px var(--accent-green);
+            flex-shrink: 0;
+            transition: all 0.3s;
+        }
+
+        .connection-dot.disconnected {
+            background: var(--accent-red);
+            box-shadow: 0 0 8px var(--accent-red);
+        }
+
+        /* ─── MAIN CONTENT ─── */
+        .content {
+            display: flex;
+            height: calc(1080px - 62px);
+            padding: 10px;
+            gap: 10px;
+        }
+
+        .column {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            height: 100%;
+        }
+
+        .col-left { width: 35%; }
+        .col-center { width: 35%; }
+        .col-right { width: 30%; }
+
+        /* ─── PANELS ─── */
+        .panel {
+            background: var(--bg-panel);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .panel-icon {
+            font-size: 14px;
+            opacity: 0.7;
+        }
+
+        .panel-title {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--text-secondary);
+        }
+
+        .panel-badge {
+            margin-left: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: var(--accent-blue-dim);
+            color: var(--accent-blue);
+            font-weight: 500;
+        }
+
+        .panel-body {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* ─── LEFT: AGENT BRAIN ─── */
+        .agent-output {
+            flex: 1;
+            min-height: 0;
+        }
+
+        .agent-output .panel-body {
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .agent-output .panel-body::-webkit-scrollbar { width: 4px; }
+        .agent-output .panel-body::-webkit-scrollbar-track { background: transparent; }
+        .agent-output .panel-body::-webkit-scrollbar-thumb { background: var(--text-dim); border-radius: 2px; }
+
+        .llm-entry {
+            margin-bottom: 12px;
+            padding: 10px 12px;
+            background: var(--bg-inset);
+            border-radius: var(--radius);
+            border-left: 3px solid var(--text-dim);
+            font-size: 13px;
+            line-height: 1.6;
+            color: var(--text-primary);
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+
+        .llm-entry.streaming {
+            border-left-color: var(--accent-amber);
+            background: rgba(255,183,77,0.05);
+        }
+
+        .llm-entry.complete {
+            border-left-color: var(--accent-green);
+        }
+
+        .llm-step-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--accent-blue);
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .llm-duration {
+            font-weight: 400;
+            color: var(--text-dim);
+            font-size: 10px;
+        }
+
+        .llm-text {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            line-height: 1.7;
+            color: var(--text-secondary);
+        }
+
+        .thinking-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            color: var(--accent-amber);
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .thinking-dots span {
+            display: inline-block;
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: var(--accent-amber);
+            animation: dot-pulse 1.4s infinite ease-in-out;
+        }
+
+        .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes dot-pulse {
+            0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+            40% { opacity: 1; transform: scale(1.1); }
+        }
+
+        /* Token usage */
+        .token-panel {
+            height: 80px;
+            flex-shrink: 0;
+        }
+
+        .token-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            padding: 10px 14px;
+            height: 100%;
+        }
+
+        .token-item {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: var(--bg-card);
+            border-radius: var(--radius-sm);
+            padding: 6px;
+        }
+
+        .token-item .stat-value {
+            font-size: 14px;
+        }
+
+        /* Key presses */
+        .keypress-panel {
+            height: 100px;
+            flex-shrink: 0;
+        }
+
+        .keypress-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            padding: 8px 14px;
+            overflow: hidden;
+            height: 100%;
+            align-content: flex-start;
+        }
+
+        .key-chip {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 4px;
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            transition: all 0.2s;
+        }
+
+        .key-chip.latest {
+            background: var(--accent-blue-dim);
+            color: var(--accent-blue);
+            border-color: rgba(79,195,247,0.4);
+            box-shadow: 0 0 8px rgba(79,195,247,0.2);
+        }
+
+        /* ─── CENTER: GAME VIEW ─── */
+        .game-frame-panel {
+            flex-shrink: 0;
+        }
+
+        .frame-wrapper {
+            width: 100%;
+            aspect-ratio: 3 / 2;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .frame-wrapper::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border: 1px solid rgba(79,195,247,0.08);
+            pointer-events: none;
+        }
+
+        #game-frame {
+            width: 100%;
+            height: 100%;
+            object-fit: fill;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+        }
+
+        /* Party grid */
+        .party-panel {
+            flex: 1;
+            min-height: 0;
+        }
+
+        .party-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 6px;
+            padding: 8px 10px;
+            height: 100%;
+            align-content: start;
+        }
+
+        .party-card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 8px;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            transition: border-color 0.2s;
+            min-height: 0;
+        }
+
+        .party-card:hover { border-color: var(--border-accent); }
+
+        .party-card.empty {
+            opacity: 0.3;
+            border-style: dashed;
+        }
+
+        .poke-sprite {
+            width: 48px;
+            height: 48px;
+            image-rendering: pixelated;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+        }
+
+        .poke-name {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-primary);
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        .poke-level {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: var(--text-dim);
+        }
+
+        .poke-types {
+            display: flex;
+            gap: 3px;
+        }
+
+        .type-chip {
+            font-size: 8px;
+            font-weight: 700;
+            padding: 1px 5px;
+            border-radius: 3px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #fff;
+        }
+
+        /* Pokemon type colors */
+        .type-normal { background: #A8A878; }
+        .type-fire { background: #F08030; }
+        .type-water { background: #6890F0; }
+        .type-grass { background: #78C850; }
+        .type-electric { background: #F8D030; color: #333; }
+        .type-ice { background: #98D8D8; color: #333; }
+        .type-fighting { background: #C03028; }
+        .type-poison { background: #A040A0; }
+        .type-ground { background: #E0C068; color: #333; }
+        .type-flying { background: #A890F0; }
+        .type-psychic { background: #F85888; }
+        .type-bug { background: #A8B820; }
+        .type-rock { background: #B8A038; }
+        .type-ghost { background: #705898; }
+        .type-dragon { background: #7038F8; }
+        .type-dark { background: #705848; }
+        .type-steel { background: #B8B8D0; color: #333; }
+        .type-fairy { background: #EE99AC; color: #333; }
+
+        .poke-hp-bar {
+            width: 100%;
+            height: 6px;
+            background: var(--bg-inset);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .poke-hp-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.5s ease, background 0.5s;
+        }
+
+        .hp-high { background: var(--accent-green); }
+        .hp-mid { background: var(--accent-amber); }
+        .hp-low { background: var(--accent-red); }
+
+        .poke-hp-text {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9px;
+            color: var(--text-dim);
+        }
+
+        /* ─── RIGHT: GAME INFO ─── */
+        .objectives-panel {
+            flex: 1;
+            min-height: 0;
+        }
+
+        .objectives-panel .panel-body {
+            overflow-y: auto;
+            padding: 10px 14px;
+        }
+
+        .objectives-panel .panel-body::-webkit-scrollbar { width: 4px; }
+        .objectives-panel .panel-body::-webkit-scrollbar-track { background: transparent; }
+        .objectives-panel .panel-body::-webkit-scrollbar-thumb { background: var(--text-dim); border-radius: 2px; }
+
+        .obj-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .obj-item:last-child { border-bottom: none; }
+
+        .obj-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--accent-blue);
+            min-width: 20px;
+            padding-top: 1px;
+        }
+
+        .obj-text {
+            font-size: 13px;
+            line-height: 1.4;
+            color: var(--text-primary);
+        }
+
+        .obj-type {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            padding: 1px 6px;
+            background: var(--bg-card);
+            border-radius: 3px;
+            margin-top: 3px;
+            display: inline-block;
+        }
+
+        .obj-item.completed .obj-text {
+            text-decoration: line-through;
+            color: var(--text-dim);
+        }
+
+        .obj-item.completed .obj-num { color: var(--accent-green); }
+
+        .obj-check {
+            color: var(--accent-green);
+            font-size: 14px;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+
+        /* Inventory */
+        .inventory-panel {
+            height: 200px;
+            flex-shrink: 0;
+        }
+
+        .inventory-body {
+            padding: 10px 14px;
+            overflow-y: auto;
+            height: 100%;
+        }
+
+        .inventory-body::-webkit-scrollbar { width: 4px; }
+        .inventory-body::-webkit-scrollbar-track { background: transparent; }
+        .inventory-body::-webkit-scrollbar-thumb { background: var(--text-dim); border-radius: 2px; }
+
+        .money-display {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            padding: 6px 10px;
+            background: var(--bg-card);
+            border-radius: var(--radius-sm);
+        }
+
+        .money-icon {
+            font-size: 16px;
+        }
+
+        .money-amount {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--accent-amber);
+        }
+
+        .item-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px;
+        }
+
+        .item-entry {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--text-secondary);
+            padding: 3px 6px;
+            background: var(--bg-card);
+            border-radius: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .item-count {
+            color: var(--accent-blue);
+            font-weight: 600;
+        }
+
+        /* Map section */
+        .map-panel {
+            height: 240px;
+            flex-shrink: 0;
+        }
+
+        .map-body {
+            padding: 8px 14px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .map-location {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .map-loc-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--accent-blue);
+        }
+
+        .map-coords {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--text-dim);
+        }
+
+        .minimap {
+            flex: 1;
+            background: var(--bg-inset);
+            border-radius: var(--radius-sm);
+            padding: 6px 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            line-height: 1.3;
+            white-space: pre;
+            overflow: auto;
+            color: var(--text-dim);
+        }
+
+        .minimap::-webkit-scrollbar { width: 4px; height: 4px; }
+        .minimap::-webkit-scrollbar-track { background: transparent; }
+        .minimap::-webkit-scrollbar-thumb { background: var(--text-dim); border-radius: 2px; }
+
+        /* Map tile coloring */
+        .map-player { color: var(--accent-amber); font-weight: bold; }
+        .map-wall { color: #4a5568; }
+        .map-grass { color: #48bb78; }
+        .map-water { color: #63b3ed; }
+        .map-npc { color: var(--accent-red); }
+        .map-door { color: var(--accent-purple); }
+        .map-path { color: #718096; }
+
+        /* ─── UTILITY ─── */
+        .no-data {
+            color: var(--text-dim);
+            font-style: italic;
+            font-size: 12px;
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* Subtle noise texture overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0.015;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+    <div class="logo">
+        <div class="logo-pokeball"></div>
+        <span class="logo-text">Schuyler AI Pokemon Emerald</span>
+    </div>
+    <span id="phase-badge" class="phase-badge">PHASE 1</span>
+
+    <!-- Badge Timeline -->
+    <div class="badge-timeline" id="badge-timeline">
+        <!-- Populated by JS -->
+    </div>
+
+    <!-- Stats -->
+    <div class="header-stats">
+        <div class="stat-box">
+            <span class="stat-label">Steps</span>
+            <span class="stat-value" id="stat-steps">0</span>
+        </div>
+        <div class="stat-box">
+            <span class="stat-label">Time</span>
+            <span class="stat-value" id="stat-time">00:00:00</span>
+        </div>
+        <div class="stat-box">
+            <span class="stat-label">Tokens</span>
+            <span class="stat-value tokens" id="stat-tokens">0</span>
+        </div>
+        <div class="stat-box">
+            <span class="stat-label">Cost</span>
+            <span class="stat-value cost" id="stat-cost">$0.00</span>
+        </div>
+    </div>
+
+    <div class="connection-dot" id="connection-dot"></div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="content">
+
+    <!-- LEFT COLUMN: Agent Brain -->
+    <div class="column col-left">
+        <div class="panel agent-output" style="flex:1; min-height:0;">
+            <div class="panel-header">
+                <span class="panel-icon">&#9881;</span>
+                <span class="panel-title">Agent Brain</span>
+                <span class="panel-badge" id="agent-status">IDLE</span>
+            </div>
+            <div class="panel-body" id="agent-thinking-body">
+                <div class="thinking-indicator" id="thinking-indicator" style="display:none;">
+                    <div class="thinking-dots"><span></span><span></span><span></span></div>
+                    <span>Agent is thinking...</span>
+                </div>
+                <div id="agent-messages"></div>
+            </div>
+        </div>
+
+        <div class="panel token-panel">
+            <div class="panel-header">
+                <span class="panel-icon">&#9670;</span>
+                <span class="panel-title">Token Usage</span>
+            </div>
+            <div class="token-grid">
+                <div class="token-item">
+                    <span class="stat-label">Total</span>
+                    <span class="stat-value tokens" id="tok-total">0</span>
+                </div>
+                <div class="token-item">
+                    <span class="stat-label">Prompt</span>
+                    <span class="stat-value" id="tok-prompt">0</span>
+                </div>
+                <div class="token-item">
+                    <span class="stat-label">Completion</span>
+                    <span class="stat-value" id="tok-completion">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel keypress-panel">
+            <div class="panel-header">
+                <span class="panel-icon">&#9654;</span>
+                <span class="panel-title">Key Presses</span>
+            </div>
+            <div class="keypress-row" id="keypress-row">
+                <span class="no-data">Waiting for actions...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- CENTER COLUMN: Game View -->
+    <div class="column col-center">
+        <div class="panel game-frame-panel">
+            <div class="panel-header">
+                <span class="panel-icon">&#9658;</span>
+                <span class="panel-title">Game View</span>
+                <span class="panel-badge" id="frame-fps">--</span>
+            </div>
+            <div class="frame-wrapper">
+                <img id="game-frame" src="" alt="Game Frame">
+            </div>
+        </div>
+
+        <div class="panel party-panel">
+            <div class="panel-header">
+                <span class="panel-icon">&#9733;</span>
+                <span class="panel-title">Party</span>
+                <span class="panel-badge" id="party-count">0/6</span>
+            </div>
+            <div class="party-grid" id="party-grid">
+                <!-- Party cards populated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT COLUMN: Game Info -->
+    <div class="column col-right">
+        <div class="panel objectives-panel">
+            <div class="panel-header">
+                <span class="panel-icon">&#9673;</span>
+                <span class="panel-title">Objectives</span>
+                <span class="panel-badge" id="obj-count">0</span>
+            </div>
+            <div class="panel-body" id="objectives-body">
+                <div class="no-data">Waiting for agent...</div>
+            </div>
+        </div>
+
+        <div class="panel inventory-panel">
+            <div class="panel-header">
+                <span class="panel-icon">&#9776;</span>
+                <span class="panel-title">Inventory</span>
+            </div>
+            <div class="inventory-body" id="inventory-body">
+                <div class="money-display">
+                    <span class="money-icon">$</span>
+                    <span class="money-amount" id="money-amount">0</span>
+                </div>
+                <div class="item-grid" id="item-grid"></div>
+            </div>
+        </div>
+
+        <div class="panel map-panel">
+            <div class="panel-header">
+                <span class="panel-icon">&#9635;</span>
+                <span class="panel-title">Map</span>
+            </div>
+            <div class="map-body">
+                <div class="map-location">
+                    <span class="map-loc-name" id="map-loc-name">Unknown</span>
+                    <span class="map-coords" id="map-coords">(0, 0)</span>
+                </div>
+                <div class="minimap" id="minimap">Loading map...</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+(function() {
+    'use strict';
+
+    // ─── CONFIG ───
+    const serverPort = window.location.port || '8000';
+    const framePort = (parseInt(serverPort, 10) || 8000) + 1;
+    const serverUrl = `http://${window.location.hostname}:${serverPort}`;
+    const frameServerUrl = `http://${window.location.hostname}:${framePort}`;
+
+    // ─── HOENN DEX → NATIONAL DEX MAPPING ───
+    const HOENN_TO_NATIONAL = {
+        'treecko':252,'grovyle':253,'sceptile':254,'torchic':255,'combusken':256,'blaziken':257,
+        'mudkip':258,'marshtomp':259,'swampert':260,'poochyena':261,'mightyena':262,'zigzagoon':263,
+        'linoone':264,'wurmple':265,'silcoon':266,'beautifly':267,'cascoon':268,'dustox':269,
+        'lotad':270,'lombre':271,'ludicolo':272,'seedot':273,'nuzleaf':274,'shiftry':275,
+        'taillow':276,'swellow':277,'wingull':278,'pelipper':279,'ralts':280,'kirlia':281,
+        'gardevoir':282,'surskit':283,'masquerain':284,'shroomish':285,'breloom':286,
+        'slakoth':287,'vigoroth':288,'slaking':289,'nincada':290,'ninjask':291,'shedinja':292,
+        'whismur':293,'loudred':294,'exploud':295,'makuhita':296,'hariyama':297,
+        'azurill':298,'nosepass':299,'skitty':300,'delcatty':301,'sableye':302,'mawile':303,
+        'aron':304,'lairon':305,'aggron':306,'meditite':307,'medicham':308,
+        'electrike':309,'manectric':310,'plusle':311,'minun':312,'volbeat':313,'illumise':314,
+        'roselia':315,'gulpin':316,'swalot':317,'carvanha':318,'sharpedo':319,
+        'wailmer':320,'wailord':321,'numel':322,'camerupt':323,'torkoal':324,
+        'spoink':325,'grumpig':326,'spinda':327,'trapinch':328,'vibrava':329,'flygon':330,
+        'cacnea':331,'cacturne':332,'swablu':333,'altaria':334,'zangoose':335,'seviper':336,
+        'lunatone':337,'solrock':338,'barboach':339,'whiscash':340,'corphish':341,'crawdaunt':342,
+        'baltoy':343,'claydol':344,'lileep':345,'cradily':346,'anorith':347,'armaldo':348,
+        'feebas':349,'milotic':350,'castform':351,'kecleon':352,'shuppet':353,'banette':354,
+        'duskull':355,'dusclops':356,'tropius':357,'chimecho':358,'absol':359,
+        'wynaut':360,'snorunt':361,'glalie':362,'spheal':363,'sealeo':364,'walrein':365,
+        'clamperl':366,'huntail':367,'gorebyss':368,'relicanth':369,'luvdisc':370,
+        'bagon':371,'shelgon':372,'salamence':373,'beldum':374,'metang':375,'metagross':376,
+        'regirock':377,'regice':378,'registeel':379,'latias':380,'latios':381,
+        'kyogre':382,'groudon':383,'rayquaza':384,'jirachi':385,'deoxys':386,
+        // Gen 1-2 pokemon commonly seen in Emerald
+        'bulbasaur':1,'charmander':4,'squirtle':7,'pikachu':25,'clefairy':35,
+        'vulpix':37,'jigglypuff':39,'zubat':41,'golbat':42,'oddish':43,'gloom':44,
+        'vileplume':45,'paras':46,'diglett':50,'meowth':52,'psyduck':54,'golduck':55,
+        'mankey':56,'growlithe':58,'poliwag':60,'abra':63,'kadabra':64,'alakazam':65,
+        'machop':66,'machoke':67,'machamp':68,'bellsprout':69,'tentacool':72,'tentacruel':73,
+        'geodude':74,'graveler':75,'golem':76,'ponyta':77,'slowpoke':79,
+        'magnemite':81,'magneton':82,'doduo':84,'dodrio':85,'seel':86,
+        'grimer':88,'shellder':90,'gastly':92,'haunter':93,'gengar':94,
+        'onix':95,'drowzee':96,'krabby':98,'voltorb':100,'electrode':101,
+        'exeggcute':102,'cubone':104,'hitmonlee':106,'hitmonchan':107,'lickitung':108,
+        'koffing':109,'weezing':110,'rhyhorn':111,'chansey':113,
+        'tangela':114,'kangaskhan':115,'horsea':116,'seadra':117,'goldeen':118,
+        'staryu':120,'starmie':121,'mr. mime':122,'scyther':123,'jynx':124,
+        'electabuzz':125,'magmar':126,'pinsir':127,'tauros':128,'magikarp':129,
+        'gyarados':130,'lapras':131,'ditto':132,'eevee':133,'vaporeon':134,
+        'jolteon':135,'flareon':136,'porygon':137,'omanyte':138,
+        'kabuto':140,'aerodactyl':142,'snorlax':143,'articuno':144,
+        'zapdos':145,'moltres':146,'dratini':147,'dragonair':148,'dragonite':149,
+        'mewtwo':150,'mew':151,
+        'chikorita':152,'cyndaquil':155,'totodile':158,'sentret':161,'hoothoot':163,
+        'ledyba':165,'spinarak':167,'crobat':169,'chinchou':170,'pichu':172,
+        'cleffa':173,'igglybuff':174,'togepi':175,'togetic':176,'natu':177,'xatu':178,
+        'mareep':179,'flaaffy':180,'ampharos':181,'bellossom':182,'marill':183,'azumarill':184,
+        'sudowoodo':185,'politoed':186,'hoppip':187,'skiploom':188,'jumpluff':189,
+        'aipom':190,'sunkern':191,'sunflora':192,'yanma':193,'wooper':194,'quagsire':195,
+        'espeon':196,'umbreon':197,'murkrow':198,'slowking':199,'misdreavus':200,
+        'unown':201,'wobbuffet':202,'girafarig':203,'pineco':204,'forretress':205,
+        'dunsparce':206,'gligar':207,'steelix':208,'snubbull':209,'granbull':210,
+        'qwilfish':211,'scizor':212,'shuckle':213,'heracross':214,'sneasel':215,
+        'teddiursa':216,'ursaring':217,'slugma':218,'magcargo':219,'swinub':220,
+        'corsola':222,'remoraid':223,'octillery':224,'delibird':225,'mantine':226,
+        'skarmory':227,'houndour':228,'houndoom':229,'kingdra':230,'phanpy':231,
+        'donphan':232,'porygon2':233,'stantler':234,'smeargle':235,'tyrogue':236,
+        'hitmontop':237,'smoochum':238,'elekid':239,'magby':240,'miltank':241,
+        'blissey':242,'raikou':243,'entei':244,'suicune':245,'larvitar':246,
+        'pupitar':247,'tyranitar':248,'lugia':249,'ho-oh':250,'celebi':251
+    };
+
+    function getNationalDex(speciesName) {
+        if (!speciesName) return null;
+        const key = speciesName.toLowerCase().trim();
+        return HOENN_TO_NATIONAL[key] || null;
+    }
+
+    function getSpriteUrl(speciesName) {
+        const dex = getNationalDex(speciesName);
+        if (dex) {
+            return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${dex}.png`;
+        }
+        return null;
+    }
+
+    // ─── BADGE DATA ───
+    const BADGES = [
+        { name: 'Stone', milestone: 'BADGE_1' },
+        { name: 'Knuckle', milestone: 'BADGE_2' },
+        { name: 'Dynamo', milestone: 'BADGE_3' },
+        { name: 'Heat', milestone: 'BADGE_4' },
+        { name: 'Balance', milestone: 'BADGE_5' },
+        { name: 'Feather', milestone: 'BADGE_6' },
+        { name: 'Mind', milestone: 'BADGE_7' },
+        { name: 'Rain', milestone: 'BADGE_8' }
+    ];
+
+    function initBadgeTimeline() {
+        const container = document.getElementById('badge-timeline');
+        container.innerHTML = '';
+        BADGES.forEach((badge, i) => {
+            if (i > 0) {
+                const conn = document.createElement('div');
+                conn.className = 'badge-connector';
+                conn.id = `badge-conn-${i}`;
+                container.appendChild(conn);
+            }
+            const node = document.createElement('div');
+            node.className = 'badge-node';
+            node.id = `badge-node-${i}`;
+            node.innerHTML = `
+                <div class="badge-icon">${i + 1}</div>
+                <div class="badge-label">${badge.name}</div>
+            `;
+            container.appendChild(node);
+        });
+    }
+
+    function updateBadgeTimeline(milestones) {
+        if (!milestones || !Array.isArray(milestones)) return;
+        const completedNames = new Set(
+            milestones.filter(m => m.completed).map(m => m.name)
+        );
+        BADGES.forEach((badge, i) => {
+            const node = document.getElementById(`badge-node-${i}`);
+            if (completedNames.has(badge.milestone)) {
+                node.classList.add('earned');
+            } else {
+                node.classList.remove('earned');
+            }
+            if (i > 0) {
+                const conn = document.getElementById(`badge-conn-${i}`);
+                // Connector is active if the badge BEFORE it is earned
+                if (document.getElementById(`badge-node-${i-1}`).classList.contains('earned')) {
+                    conn.classList.add('active');
+                } else {
+                    conn.classList.remove('active');
+                }
+            }
+        });
+    }
+
+    // ─── TIME FORMATTING ───
+    function formatTime(seconds) {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = Math.floor(seconds % 60);
+        return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    }
+
+    function formatNumber(n) {
+        if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+        if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+        return n.toLocaleString();
+    }
+
+    // ─── STATE ───
+    let isConnected = false;
+    let sessionStartTime = null;
+    let savedRunTime = 0;
+    let frameCount = 0;
+    let lastFrameTime = performance.now();
+
+    // ─── FRAME POLLING ───
+    let consecutiveErrors = 0;
+    let framePollInterval = 40;
+    let frameTimer = null;
+
+    async function pollFrame() {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 2000);
+            const response = await fetch(`${frameServerUrl}/frame`, {
+                signal: controller.signal,
+                cache: 'no-cache'
+            });
+            clearTimeout(timeoutId);
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.frame) {
+                    document.getElementById('game-frame').src = `data:image/png;base64,${data.frame}`;
+                }
+                consecutiveErrors = 0;
+
+                // FPS counter
+                frameCount++;
+                const now = performance.now();
+                if (now - lastFrameTime >= 2000) {
+                    const fps = Math.round(frameCount / ((now - lastFrameTime) / 1000));
+                    document.getElementById('frame-fps').textContent = `${fps} FPS`;
+                    frameCount = 0;
+                    lastFrameTime = now;
+                }
+
+                if (!isConnected) {
+                    isConnected = true;
+                    document.getElementById('connection-dot').classList.remove('disconnected');
+                }
+            }
+        } catch (e) {
+            consecutiveErrors++;
+            if (consecutiveErrors > 2) {
+                framePollInterval = Math.min(framePollInterval * 1.5, 200);
+                clearInterval(frameTimer);
+                frameTimer = setInterval(pollFrame, framePollInterval);
+            }
+            if (isConnected || consecutiveErrors === 1) {
+                isConnected = false;
+                document.getElementById('connection-dot').classList.add('disconnected');
+            }
+        }
+    }
+
+    // ─── METRICS ───
+    async function updateMetrics() {
+        try {
+            const r = await fetch(`${serverUrl}/metrics`);
+            if (!r.ok) return;
+            const m = await r.json();
+
+            document.getElementById('stat-steps').textContent = formatNumber(m.agent_step_count || m.total_actions || 0);
+            document.getElementById('stat-tokens').textContent = formatNumber(m.total_tokens || 0);
+            document.getElementById('stat-cost').textContent = `$${(m.total_cost || 0).toFixed(2)}`;
+
+            document.getElementById('tok-total').textContent = formatNumber(m.total_tokens || 0);
+            document.getElementById('tok-prompt').textContent = formatNumber(m.prompt_tokens || 0);
+            document.getElementById('tok-completion').textContent = formatNumber(m.completion_tokens || 0);
+
+            // Timer init
+            const isNew = m.total_llm_calls === 0 && m.total_actions === 0 && m.total_cost === 0;
+            if (isNew) {
+                sessionStartTime = null;
+                savedRunTime = 0;
+            } else if (m.start_time && !sessionStartTime) {
+                sessionStartTime = m.start_time * 1000;
+                savedRunTime = m.total_run_time || 0;
+            }
+        } catch (e) { /* silent */ }
+    }
+
+    function updateTime() {
+        if (sessionStartTime) {
+            const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000) + savedRunTime;
+            document.getElementById('stat-time').textContent = formatTime(elapsed);
+        }
+    }
+
+    // ─── AGENT STATE (objectives / phase) ───
+    async function updateAgentState() {
+        try {
+            const r = await fetch(`${serverUrl}/agent_state`);
+            if (!r.ok) return;
+            const data = await r.json();
+
+            // Phase
+            const phase = data.phase || 1;
+            document.getElementById('phase-badge').textContent = `PHASE ${phase}`;
+
+            // Objectives
+            const objBody = document.getElementById('objectives-body');
+            const active = data.active_objectives || [];
+            const completed = data.completed_objectives || [];
+
+            if (active.length === 0 && completed.length === 0) {
+                objBody.innerHTML = '<div class="no-data">Waiting for agent to set objectives...</div>';
+                document.getElementById('obj-count').textContent = '0';
+                return;
+            }
+
+            let html = '';
+            active.forEach((obj, i) => {
+                html += `<div class="obj-item">
+                    <span class="obj-num">${i + 1}.</span>
+                    <div>
+                        <div class="obj-text">${escHtml(obj.description)}</div>
+                        <span class="obj-type">${obj.type || 'task'}</span>
+                    </div>
+                </div>`;
+            });
+
+            if (completed.length > 0) {
+                completed.forEach(obj => {
+                    html += `<div class="obj-item completed">
+                        <span class="obj-num">&#10003;</span>
+                        <div>
+                            <div class="obj-text">${escHtml(obj.description)}</div>
+                        </div>
+                    </div>`;
+                });
+            }
+
+            objBody.innerHTML = html;
+            document.getElementById('obj-count').textContent = active.length;
+        } catch (e) { /* silent */ }
+    }
+
+    // ─── GAME STATE (party, map, inventory) ───
+    let lastStateSignature = '';
+
+    async function updateGameState() {
+        try {
+            const r = await fetch(`${serverUrl}/state`);
+            if (!r.ok) return;
+            const data = await r.json();
+
+            updateParty(data);
+            updateMap(data);
+            updateInventory(data);
+        } catch (e) { /* silent */ }
+    }
+
+    function updateParty(data) {
+        const grid = document.getElementById('party-grid');
+        const party = data.player?.party || [];
+
+        document.getElementById('party-count').textContent = `${party.length}/6`;
+
+        let html = '';
+        for (let i = 0; i < 6; i++) {
+            const p = party[i];
+            if (p && p.species_name && p.species_name.trim() !== '') {
+                const hpPct = (p.max_hp > 0) ? Math.round((p.current_hp / p.max_hp) * 100) : 0;
+                const hpClass = hpPct > 50 ? 'hp-high' : (hpPct > 25 ? 'hp-mid' : 'hp-low');
+                const displayName = (p.nickname && p.nickname.trim()) ? p.nickname : p.species_name;
+                const spriteUrl = getSpriteUrl(p.species_name);
+                const spriteHtml = spriteUrl
+                    ? `<img class="poke-sprite" src="${spriteUrl}" alt="${displayName}" onerror="this.style.display='none'">`
+                    : `<div class="poke-sprite" style="display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:20px;">?</div>`;
+
+                // Type chips
+                let typeHtml = '';
+                if (p.type1) {
+                    typeHtml += `<span class="type-chip type-${p.type1.toLowerCase()}">${p.type1.substring(0,3)}</span>`;
+                }
+                if (p.type2 && p.type2 !== p.type1 && p.type2 !== 'None' && p.type2 !== '???') {
+                    typeHtml += `<span class="type-chip type-${p.type2.toLowerCase()}">${p.type2.substring(0,3)}</span>`;
+                }
+
+                html += `<div class="party-card">
+                    ${spriteHtml}
+                    <div class="poke-name">${displayName.toUpperCase()}</div>
+                    <div class="poke-level">Lv.${p.level || '??'}</div>
+                    <div class="poke-types">${typeHtml}</div>
+                    <div class="poke-hp-bar"><div class="poke-hp-fill ${hpClass}" style="width:${hpPct}%"></div></div>
+                    <div class="poke-hp-text">${p.current_hp || 0}/${p.max_hp || 0}</div>
+                </div>`;
+            } else {
+                html += `<div class="party-card empty">
+                    <div class="poke-sprite" style="display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:24px;opacity:0.3;">+</div>
+                    <div class="poke-name" style="color:var(--text-dim);">Empty</div>
+                </div>`;
+            }
+        }
+        grid.innerHTML = html;
+    }
+
+    function updateMap(data) {
+        // Location name
+        const locName = data.player?.location || data.map?.location || 'Unknown';
+        document.getElementById('map-loc-name').textContent = locName;
+
+        // Coordinates
+        const pos = data.player?.position;
+        if (pos) {
+            document.getElementById('map-coords').textContent = `(${pos.x}, ${pos.y})`;
+        }
+
+        // Mini-map
+        const minimap = document.getElementById('minimap');
+        if (data.map?.visual_map) {
+            // Filter boring lines and colorize
+            let lines = data.map.visual_map.split('\n');
+            lines = lines.filter(line => {
+                const cl = line.trim();
+                if (cl === '') return false;
+                if (/^[\d\-\s#N]+$/.test(cl)) return false;
+                return true;
+            });
+
+            if (lines.length > 0) {
+                // Colorize the map
+                let colored = '';
+                for (const line of lines) {
+                    for (const ch of line) {
+                        if (ch === 'P') colored += `<span class="map-player">${ch}</span>`;
+                        else if (ch === '#') colored += `<span class="map-wall">${ch}</span>`;
+                        else if (ch === '"' || ch === ',') colored += `<span class="map-grass">${ch}</span>`;
+                        else if (ch === '~') colored += `<span class="map-water">${ch}</span>`;
+                        else if (ch === 'N') colored += `<span class="map-npc">${ch}</span>`;
+                        else if (ch === 'D' || ch === '>') colored += `<span class="map-door">${ch}</span>`;
+                        else if (ch === '.' || ch === '_') colored += `<span class="map-path">${ch}</span>`;
+                        else colored += ch;
+                    }
+                    colored += '\n';
+                }
+                minimap.innerHTML = colored;
+            } else {
+                minimap.textContent = 'No map data';
+            }
+        } else {
+            minimap.textContent = 'No map data';
+        }
+    }
+
+    function updateInventory(data) {
+        // Money
+        const money = data.player?.money ?? data.game?.money ?? 0;
+        document.getElementById('money-amount').textContent = `\u00A5${money.toLocaleString()}`;
+
+        // Items
+        const items = data.game?.items || [];
+        const grid = document.getElementById('item-grid');
+
+        if (items.length === 0) {
+            grid.innerHTML = '<span class="no-data" style="grid-column:1/-1;">No items</span>';
+            return;
+        }
+
+        let html = '';
+        // Handle both array-of-objects and array-of-strings formats
+        items.forEach(item => {
+            if (typeof item === 'object') {
+                const name = item.name || item.item || 'Unknown';
+                const count = item.quantity || item.count || 1;
+                html += `<div class="item-entry">${name} <span class="item-count">x${count}</span></div>`;
+            } else if (typeof item === 'string') {
+                html += `<div class="item-entry">${item}</div>`;
+            }
+        });
+        grid.innerHTML = html;
+    }
+
+    // ─── RECENT ACTIONS ───
+    let lastActionSig = '';
+
+    async function updateRecentActions() {
+        try {
+            const r = await fetch(`${serverUrl}/recent_actions`);
+            if (!r.ok) return;
+            const data = await r.json();
+
+            const buttons = data.recent_buttons || [];
+            const recent = buttons.slice(-20);
+
+            const sig = recent.map(b => `${b.button}:${b.timestamp}`).join('|');
+            if (sig === lastActionSig) return;
+            lastActionSig = sig;
+
+            const row = document.getElementById('keypress-row');
+            if (recent.length === 0) {
+                row.innerHTML = '<span class="no-data">Waiting for actions...</span>';
+                return;
+            }
+
+            let html = '';
+            recent.forEach((btn, i) => {
+                const isLatest = i === recent.length - 1;
+                const opacity = Math.max(0.3, 1.0 - ((recent.length - 1 - i) / Math.max(recent.length - 1, 1)) * 0.7);
+                html += `<span class="key-chip${isLatest ? ' latest' : ''}" style="opacity:${opacity}">${btn.button}</span>`;
+            });
+            row.innerHTML = html;
+        } catch (e) { /* silent */ }
+    }
+
+    // ─── MILESTONES ───
+    async function updateMilestones() {
+        try {
+            const r = await fetch(`${serverUrl}/milestones`);
+            if (!r.ok) return;
+            const data = await r.json();
+
+            updateBadgeTimeline(data.milestones || []);
+        } catch (e) { /* silent */ }
+    }
+
+    // ─── AGENT THINKING (SSE) ───
+    let streamSource = null;
+
+    function initAgentStreaming() {
+        const messagesDiv = document.getElementById('agent-messages');
+        const thinkingIndicator = document.getElementById('thinking-indicator');
+        const statusBadge = document.getElementById('agent-status');
+
+        if (streamSource) streamSource.close();
+
+        streamSource = new EventSource(`${serverUrl}/agent_stream`);
+
+        streamSource.onopen = function() {
+            statusBadge.textContent = 'CONNECTED';
+        };
+
+        streamSource.onmessage = function(event) {
+            try {
+                const data = JSON.parse(event.data);
+
+                if (data.error || data.heartbeat) return;
+                if (!data.is_new) return;
+
+                // Hide thinking indicator
+                thinkingIndicator.style.display = 'none';
+                statusBadge.textContent = 'ACTIVE';
+
+                // Create message entry
+                const entry = document.createElement('div');
+                entry.className = 'llm-entry streaming';
+
+                const stepLabel = document.createElement('div');
+                stepLabel.className = 'llm-step-label';
+                stepLabel.innerHTML = `Step ${data.step} <span class="llm-duration">${data.type} &middot; ${(data.duration || 0).toFixed(2)}s</span>`;
+
+                const textEl = document.createElement('div');
+                textEl.className = 'llm-text';
+
+                entry.appendChild(stepLabel);
+                entry.appendChild(textEl);
+                messagesDiv.appendChild(entry);
+
+                // Word-by-word typing
+                const words = (data.response || '').split(/(\s+)/).filter(w => w.length > 0);
+                let wi = 0;
+
+                function typeWord() {
+                    if (wi < words.length) {
+                        textEl.textContent += words[wi];
+                        wi++;
+                        messagesDiv.parentElement.scrollTop = messagesDiv.parentElement.scrollHeight;
+                        setTimeout(typeWord, words[wi - 1].trim() === '' ? 2 : 8);
+                    } else {
+                        entry.classList.remove('streaming');
+                        entry.classList.add('complete');
+                        thinkingIndicator.style.display = 'flex';
+                    }
+                }
+
+                typeWord();
+
+                // Keep max 30 messages
+                while (messagesDiv.children.length > 30) {
+                    messagesDiv.removeChild(messagesDiv.firstChild);
+                }
+
+            } catch (e) { /* parse error */ }
+        };
+
+        streamSource.onerror = function() {
+            statusBadge.textContent = 'RECONNECTING';
+            setTimeout(initAgentStreaming, 5000);
+        };
+    }
+
+    // ─── HELPERS ───
+    function escHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str || '';
+        return div.innerHTML;
+    }
+
+    // ─── INIT ───
+    initBadgeTimeline();
+    initAgentStreaming();
+
+    // Start polling
+    frameTimer = setInterval(pollFrame, 40);
+    pollFrame();
+
+    setInterval(updateMetrics, 2000);
+    setInterval(updateTime, 500);
+    setInterval(updateAgentState, 2000);
+    setInterval(updateGameState, 2000);
+    setInterval(updateRecentActions, 2000);
+    setInterval(updateMilestones, 10000);
+
+    // Initial calls
+    updateMetrics();
+    updateAgentState();
+    updateGameState();
+    updateRecentActions();
+    updateMilestones();
+
+})();
+</script>
+</body>
+</html>

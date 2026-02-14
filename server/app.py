@@ -607,6 +607,51 @@ async def get_stream():
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Stream interface not found")
 
+# Serve dashboard.html
+@app.get("/dashboard")
+async def get_dashboard():
+    """Serve the new dashboard interface"""
+    try:
+        with open("server/dashboard.html", "r") as f:
+            content = f.read()
+        return HTMLResponse(content=content)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Dashboard interface not found")
+
+# Agent state synced from client for dashboard display
+latest_agent_state = {
+    "active_objectives": [],
+    "completed_objectives": [],
+    "phase": 1,
+    "step_counter": 0,
+    "last_reasoning": "",
+    "timestamp": 0
+}
+
+@app.post("/sync_agent_state")
+async def sync_agent_state(request: Request):
+    """Receive agent objectives/phase from client after each step"""
+    global latest_agent_state
+    try:
+        data = await request.json()
+        latest_agent_state.update({
+            "active_objectives": data.get("active_objectives", []),
+            "completed_objectives": data.get("completed_objectives", []),
+            "phase": data.get("phase", 1),
+            "step_counter": data.get("step_counter", 0),
+            "last_reasoning": data.get("last_reasoning", ""),
+            "timestamp": time.time()
+        })
+        return {"status": "ok"}
+    except Exception as e:
+        logger.error(f"Error syncing agent state: {e}")
+        return {"status": "error", "message": str(e)}
+
+@app.get("/agent_state")
+async def get_agent_state():
+    """Return latest agent state for dashboard"""
+    return latest_agent_state
+
 # FastAPI endpoints
 @app.get("/health")
 async def get_health():

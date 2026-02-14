@@ -389,7 +389,29 @@ def run_multiprocess_client(server_port=8000, args=None):
                                                                         print(f"🔄 LLM metrics synced to server")
                                                         except Exception as e:
                                                             print(f"⚠️ LLM metrics sync error: {e}")
-                                                        
+
+                                                        # Sync agent state (objectives/phase) for dashboard
+                                                        try:
+                                                            agent_state_payload = {
+                                                                "step_counter": step_count,
+                                                                "phase": getattr(agent.agent_impl, 'current_phase', 1),
+                                                                "active_objectives": [
+                                                                    {"id": o.id, "description": o.description, "type": o.objective_type}
+                                                                    for o in agent.agent_impl.get_active_objectives()
+                                                                ] if hasattr(agent.agent_impl, 'get_active_objectives') else [],
+                                                                "completed_objectives": [
+                                                                    {"id": o.id, "description": o.description, "type": o.objective_type}
+                                                                    for o in agent.agent_impl.get_completed_objectives()[-5:]
+                                                                ] if hasattr(agent.agent_impl, 'get_completed_objectives') else [],
+                                                            }
+                                                            requests.post(
+                                                                f"{server_url}/sync_agent_state",
+                                                                json=agent_state_payload,
+                                                                timeout=2
+                                                            )
+                                                        except Exception as e:
+                                                            pass  # Non-critical, don't spam logs
+
                                                         # Save game state checkpoint
                                                         checkpoint_response = requests.post(
                                                             f"{server_url}/checkpoint",
