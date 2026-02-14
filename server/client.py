@@ -332,10 +332,10 @@ def run_multiprocess_client(server_port=8000, args=None):
                                 # Track when queue first became empty
                                 if queue_empty_since is None:
                                     queue_empty_since = current_time
-                                    print("⏳ Action queue empty, waiting 10s for game to settle...")
+                                    print("⏳ Action queue empty, waiting 7s for game to settle...")
 
                                 # Wait 10 seconds after queue empties before taking screenshot
-                                if current_time - queue_empty_since < 10.0:
+                                if current_time - queue_empty_since < 7.0:
                                     continue  # Skip this iteration, check again next loop
 
                                 # Reset tracker for next step
