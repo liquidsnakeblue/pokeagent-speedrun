@@ -1038,9 +1038,8 @@
                 <span class="panel-title">Agent Brain</span>
                 <span class="panel-badge" id="agent-status">IDLE</span>
             </div>
-            <!-- Fixed cards at top -->
-            <div style="flex-shrink:0; display:flex; flex-direction:column; gap:8px; padding:0 12px 8px 12px;">
-                <!-- Token usage card -->
+            <!-- Token usage — fixed top -->
+            <div style="flex-shrink:0; padding:0 12px 8px 12px;">
                 <div class="token-card">
                     <div class="token-header">
                         <span class="token-header-label"><span class="icon">&#9889;</span> Token Usage</span>
@@ -1055,16 +1054,20 @@
                         <span id="tok-reasoning-wrap" style="display:none;">(<span class="dot dot-reasoning"></span><strong id="tok-reasoning">0</strong> reasoning)</span>
                     </div>
                 </div>
+            </div>
 
-                <!-- Reasoning card -->
-                <div class="reasoning-card">
-                    <div class="reasoning-header"><span class="icon">&#9881;</span> REASONING</div>
-                    <div class="reasoning-text" id="reasoning-text">
-                        <span class="no-reasoning">Waiting for reasoning output...</span>
-                    </div>
+            <!-- Scrolling feed: vision + reasoning cards flow here -->
+            <div class="left-scroll" id="left-scroll">
+                <div id="agent-messages"></div>
+
+                <div class="thinking-indicator" id="thinking-indicator">
+                    <div class="thinking-dots"><span></span><span></span><span></span></div>
+                    <span>Agent is thinking...</span>
                 </div>
+            </div>
 
-                <!-- Key press card -->
+            <!-- Key press — fixed bottom -->
+            <div style="flex-shrink:0; padding:8px 12px 0 12px;">
                 <div class="keypress-card">
                     <div class="keypress-header">
                         <span class="keypress-header-label">&#9000; KEY PRESS</span>
@@ -1073,16 +1076,6 @@
                     <div class="keypress-chips" id="keypress-chips">
                         <span class="no-data">Waiting for actions...</span>
                     </div>
-                </div>
-            </div>
-
-            <!-- Scrolling message feed: newest at bottom, old scrolls up -->
-            <div class="left-scroll" id="left-scroll">
-                <div id="agent-messages"></div>
-
-                <div class="thinking-indicator" id="thinking-indicator">
-                    <div class="thinking-dots"><span></span><span></span><span></span></div>
-                    <span>Agent is thinking...</span>
                 </div>
             </div>
         </div>
@@ -1463,19 +1456,7 @@
             objBody.innerHTML = html;
             document.getElementById('obj-count').textContent = active.length;
 
-            // Update reasoning card from agent state (parsed from LLM response)
-            const reasoning = data.last_reasoning || '';
-            if (reasoning && reasoning !== lastReasoningText) {
-                lastReasoningText = reasoning;
-                const reasoningDiv = document.getElementById('reasoning-text');
-                // Strip "Reasoning: " prefix if present from the parsed format
-                let cleanReasoning = reasoning.replace(/^Reasoning:\s*/i, '');
-                const highlighted = escHtml(cleanReasoning).replace(
-                    /\((\d+),\s*(\d+)\)/g,
-                    '<span class="coord-highlight">($1, $2)</span>'
-                );
-                reasoningDiv.innerHTML = highlighted;
-            }
+            // Reasoning now flows in the scrolling feed via SSE, no fixed card
         } catch (e) { /* silent */ }
     }
 
@@ -1682,7 +1663,6 @@
         const messagesDiv = document.getElementById('agent-messages');
         const thinkingIndicator = document.getElementById('thinking-indicator');
         const statusBadge = document.getElementById('agent-status');
-        const reasoningDiv = document.getElementById('reasoning-text');
         const scrollContainer = document.getElementById('left-scroll');
 
         if (streamSource) streamSource.close();
@@ -1714,14 +1694,7 @@
                     // Extract REASONING section from the structured response
                     const reasoningMatch = responseText.match(/REASONING:\s*([\s\S]*?)(?=\nACTION:|$)/i);
                     const parsedReasoning = reasoningMatch ? reasoningMatch[1].trim() : responseText.trim();
-
-                    // Update the dedicated reasoning card
                     lastReasoningText = parsedReasoning;
-                    const highlighted = escHtml(parsedReasoning).replace(
-                        /\((\d+),\s*(\d+)\)/g,
-                        '<span class="coord-highlight">($1, $2)</span>'
-                    );
-                    reasoningDiv.innerHTML = highlighted;
 
                     // Extract ACTION section for the key press card
                     const actionMatch = responseText.match(/ACTION:\s*([\s\S]*?)$/i);
@@ -1734,18 +1707,18 @@
                         }
                     }
 
-                    // Also add reasoning to the scrolling feed as the agent's decision
+                    // Add reasoning as a styled card in the scrolling feed
                     const divider = document.createElement('div');
                     divider.className = 'agent-step-divider';
                     divider.innerHTML = `Step ${data.step} &middot; Reasoning &middot; ${(data.duration || 0).toFixed(1)}s`;
                     messagesDiv.appendChild(divider);
 
-                    const textBlock = document.createElement('div');
-                    textBlock.className = 'agent-text-block';
-                    textBlock.style.borderLeft = '3px solid var(--accent-purple, #ab47bc)';
-                    textBlock.style.paddingLeft = '12px';
-                    textBlock.textContent = parsedReasoning;
-                    messagesDiv.appendChild(textBlock);
+                    const reasoningCard = document.createElement('div');
+                    reasoningCard.className = 'reasoning-card';
+                    let rBody = escHtml(parsedReasoning);
+                    rBody = rBody.replace(/\((\d+),\s*(\d+)\)/g, '<span class="coord-highlight">($1, $2)</span>');
+                    reasoningCard.innerHTML = `<div class="reasoning-header"><span class="icon">&#9881;</span> REASONING</div><div class="reasoning-text">${rBody}</div>`;
+                    messagesDiv.appendChild(reasoningCard);
 
                     scrollContainer.scrollTop = scrollContainer.scrollHeight;
                 } else if (isVision) {
