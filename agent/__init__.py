@@ -40,6 +40,13 @@ class Agent:
         vlm_kwargs = {}
         if args and hasattr(args, 'vertex_id') and args.vertex_id:
             vlm_kwargs['vertex_id'] = args.vertex_id
+        if args and getattr(args, 'backend', None) == 'split':
+            vlm_kwargs['vision_url'] = args.vision_url
+            vlm_kwargs['vision_model'] = args.vision_model
+            vlm_kwargs['reasoning_url'] = args.reasoning_url
+            vlm_kwargs['reasoning_model'] = getattr(args, 'reasoning_model', None) or model_name
+            vlm_kwargs['vision_max_tokens'] = getattr(args, 'vision_max_tokens', 16384)
+            vlm_kwargs['reasoning_max_tokens'] = getattr(args, 'reasoning_max_tokens', 32768)
 
         # Initialize VLM
         self.vlm = VLM(backend=backend, model_name=model_name, **vlm_kwargs)

@@ -813,9 +813,223 @@ class GeminiBackend(VLMBackend):
             logger.warning(f"[{module_name}] Returning default response due to error: {e}")
             return "I encountered an error processing the request. I'll proceed with a basic action: press 'A' to continue."
 
+class SplitBackend(VLMBackend):
+    """Split backend: vision model describes the frame, reasoning model decides actions.
+
+    Uses two separate OpenAI-compatible endpoints:
+    - Vision model: accepts images, produces scene descriptions
+    - Reasoning model: text-only, produces game actions
+    """
+
+    VISION_PROMPT = (
+        "Describe this Pokemon Emerald game screenshot concisely. Report:\n"
+        "1. SCREEN TYPE: overworld / battle / dialogue / menu / transition / title\n"
+        "2. DIALOGUE: If a dialogue box is visible, transcribe its exact text. Otherwise write \"none\".\n"
+        "3. KEY DETAILS: Notable visual elements (NPCs nearby, items, terrain) in 1-2 sentences.\n"
+        "Keep your response under 100 words total."
+    )
+
+    def __init__(self, model_name: str, **kwargs):
+        try:
+            from openai import OpenAI
+        except ImportError:
+            raise ImportError("OpenAI package not found. Install with: pip install openai")
+
+        # Reasoning model config (model_name is the primary/reasoning model)
+        self.reasoning_model = kwargs.get('reasoning_model') or model_name
+        reasoning_url = kwargs.get('reasoning_url', 'https://api.schuyler.ai')
+        reasoning_api_key = os.getenv('REASONING_API_KEY') or os.getenv('OPENAI_API_KEY') or 'none'
+
+        # Vision model config
+        self.vision_model = kwargs.get('vision_model', 'qwen3-vl-32b-thinking')
+        vision_url = kwargs.get('vision_url', 'http://192.168.4.245:30002')
+        vision_api_key = os.getenv('VISION_API_KEY') or os.getenv('OPENAI_API_KEY') or 'none'
+
+        # Normalize URLs: ensure they end with /v1
+        reasoning_base = self._normalize_url(reasoning_url)
+        vision_base = self._normalize_url(vision_url)
+
+        # Create two OpenAI clients
+        self.vision_client = OpenAI(api_key=vision_api_key, base_url=vision_base)
+        self.reasoning_client = OpenAI(api_key=reasoning_api_key, base_url=reasoning_base)
+
+        # Token limits — must be high enough to cover thinking + content
+        self.vision_max_tokens = int(kwargs.get('vision_max_tokens', 16384))
+        self.reasoning_max_tokens = int(kwargs.get('reasoning_max_tokens', 32768))
+
+        logger.info(f"SplitBackend initialized:")
+        logger.info(f"  Vision: {self.vision_model} @ {vision_url}")
+        logger.info(f"  Reasoning: {self.reasoning_model} @ {reasoning_url}")
+
+    @staticmethod
+    def _normalize_url(url: str) -> str:
+        """Ensure URL ends with /v1 for the OpenAI client."""
+        url = url.rstrip('/')
+        if url.endswith('/v1'):
+            return url
+        return f"{url}/v1"
+
+    @staticmethod
+    def _extract_content(response) -> str:
+        """Extract content from response, handling reasoning_content vs content fields."""
+        message = response.choices[0].message
+        content = message.content
+
+        # If content is None or empty, check for reasoning_content
+        if not content:
+            reasoning_content = getattr(message, 'reasoning_content', None)
+            if reasoning_content:
+                logger.warning("SplitBackend: content was empty, falling back to reasoning_content")
+                content = reasoning_content
+
+        if not content:
+            content = ""
+            logger.error("SplitBackend: both content and reasoning_content were empty")
+
+        return content
+
+    @retry_with_exponential_backoff
+    def _call_vision_completion(self, messages):
+        """Call vision model with retry."""
+        return self.vision_client.chat.completions.create(
+            model=self.vision_model,
+            messages=messages,
+            max_tokens=self.vision_max_tokens
+        )
+
+    @retry_with_exponential_backoff
+    def _call_reasoning_completion(self, messages):
+        """Call reasoning model with retry."""
+        return self.reasoning_client.chat.completions.create(
+            model=self.reasoning_model,
+            messages=messages,
+            max_tokens=self.reasoning_max_tokens
+        )
+
+    def _call_vision(self, img, module_name: str = "Unknown") -> str:
+        """Send image to vision model and get scene description."""
+        start_time = time.time()
+
+        # Convert image to base64 PNG
+        if hasattr(img, 'convert'):
+            image = img
+        elif hasattr(img, 'shape'):
+            image = Image.fromarray(img)
+        else:
+            raise ValueError(f"Unsupported image type: {type(img)}")
+
+        buffered = BytesIO()
+        image.save(buffered, format="PNG")
+        image_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
+
+        messages = [{
+            "role": "user",
+            "content": [
+                {"type": "text", "text": self.VISION_PROMPT},
+                {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{image_base64}"}}
+            ]
+        }]
+
+        try:
+            response = self._call_vision_completion(messages)
+            description = self._extract_content(response)
+            duration = time.time() - start_time
+
+            token_usage = {}
+            if hasattr(response, 'usage') and response.usage:
+                token_usage = {
+                    "prompt_tokens": response.usage.prompt_tokens,
+                    "completion_tokens": response.usage.completion_tokens,
+                    "total_tokens": response.usage.total_tokens
+                }
+
+            log_llm_interaction(
+                interaction_type=f"split_vision_{module_name}",
+                prompt=self.VISION_PROMPT,
+                response=description,
+                duration=duration,
+                metadata={"model": self.vision_model, "backend": "split_vision", "has_image": True, "token_usage": token_usage},
+                model_info={"model": self.vision_model, "backend": "split_vision"}
+            )
+            logger.info(f"[{module_name}] SPLIT VISION ({duration:.2f}s): {description[:200]}")
+            return description
+
+        except Exception as e:
+            duration = time.time() - start_time
+            log_llm_error(
+                interaction_type=f"split_vision_{module_name}",
+                prompt=self.VISION_PROMPT,
+                error=str(e),
+                metadata={"model": self.vision_model, "backend": "split_vision", "duration": duration}
+            )
+            logger.error(f"SplitBackend vision call failed: {e}")
+            raise
+
+    def _call_reasoning(self, text: str, module_name: str = "Unknown") -> str:
+        """Send text prompt to reasoning model and get response."""
+        start_time = time.time()
+
+        messages = [{"role": "user", "content": text}]
+
+        try:
+            response = self._call_reasoning_completion(messages)
+            result = self._extract_content(response)
+            duration = time.time() - start_time
+
+            token_usage = {}
+            if hasattr(response, 'usage') and response.usage:
+                token_usage = {
+                    "prompt_tokens": response.usage.prompt_tokens,
+                    "completion_tokens": response.usage.completion_tokens,
+                    "total_tokens": response.usage.total_tokens
+                }
+
+            log_llm_interaction(
+                interaction_type=f"split_reasoning_{module_name}",
+                prompt=text,
+                response=result,
+                duration=duration,
+                metadata={"model": self.reasoning_model, "backend": "split_reasoning", "has_image": False, "token_usage": token_usage},
+                model_info={"model": self.reasoning_model, "backend": "split_reasoning"}
+            )
+            logger.info(f"[{module_name}] SPLIT REASONING ({duration:.2f}s): {result[:200]}")
+            return result
+
+        except Exception as e:
+            duration = time.time() - start_time
+            log_llm_error(
+                interaction_type=f"split_reasoning_{module_name}",
+                prompt=text,
+                error=str(e),
+                metadata={"model": self.reasoning_model, "backend": "split_reasoning", "duration": duration}
+            )
+            logger.error(f"SplitBackend reasoning call failed: {e}")
+            raise
+
+    def get_query(self, img: Union[Image.Image, np.ndarray], text: str, module_name: str = "Unknown") -> str:
+        """Process image+text by splitting into vision description then reasoning.
+
+        1. Send frame to vision model -> get scene description
+        2. Prepend description to the text prompt
+        3. Send augmented text to reasoning model -> get action response
+        """
+        # Stage 1: Vision
+        description = self._call_vision(img, module_name)
+
+        # Stage 2: Augment prompt with vision description
+        augmented_prompt = f"VISUAL FRAME DESCRIPTION (from vision model):\n{description}\n\n---\n\n{text}"
+
+        # Stage 3: Reasoning (text-only)
+        return self._call_reasoning(augmented_prompt, module_name)
+
+    def get_text_query(self, text: str, module_name: str = "Unknown") -> str:
+        """Process text-only prompt using reasoning model directly."""
+        return self._call_reasoning(text, module_name)
+
+
 class VLM:
     """Main VLM class that supports multiple backends"""
-    
+
     BACKENDS = {
         'openai': OpenAIBackend,
         'openrouter': OpenRouterBackend,
@@ -823,6 +1037,7 @@ class VLM:
         'gemini': GeminiBackend,
         'ollama': LegacyOllamaBackend,  # Legacy support
         'vertex': VertexBackend,  # Added Vertex backend
+        'split': SplitBackend,
     }
     
     def __init__(self, model_name: str, backend: str = 'openai', port: int = 8010, **kwargs):

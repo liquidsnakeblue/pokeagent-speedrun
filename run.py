@@ -101,11 +101,24 @@ def main():
     
     # Agent configuration
     parser.add_argument("--backend", type=str, default="gemini",
-                       help="VLM backend (openai, gemini, local, openrouter, vertex)")
+                       help="VLM backend (openai, gemini, local, openrouter, vertex, split)")
     parser.add_argument("--model-name", type=str, default="gemini-2.5-flash",
                        help="Model name to use")
     parser.add_argument("--vertex-id", type=str,
                        help="Google Cloud project ID for Vertex AI backend (required for --backend vertex)")
+    # Split backend configuration
+    parser.add_argument("--vision-url", type=str, default="http://192.168.4.245:30002",
+                       help="Base URL for vision model (split backend)")
+    parser.add_argument("--vision-model", type=str, default="qwen3-vl-32b-thinking",
+                       help="Vision model name (split backend)")
+    parser.add_argument("--reasoning-url", type=str, default="https://api.schuyler.ai",
+                       help="Base URL for reasoning model (split backend)")
+    parser.add_argument("--reasoning-model", type=str, default=None,
+                       help="Reasoning model name (split backend, defaults to --model-name)")
+    parser.add_argument("--vision-max-tokens", type=int, default=16384,
+                       help="Max tokens for vision model responses (split backend)")
+    parser.add_argument("--reasoning-max-tokens", type=int, default=32768,
+                       help="Max tokens for reasoning model responses (split backend)")
     parser.add_argument("--scaffold", type=str, default="simple",
                        choices=["simple", "react"],
                        help="Agent scaffold: simple (default) or react")
@@ -131,6 +144,12 @@ def main():
     # Validate vertex backend requirements
     if args.backend == "vertex" and not args.vertex_id:
         parser.error("--vertex-id is required when using --backend vertex")
+
+    # Validate split backend and set defaults
+    if args.backend == "split":
+        if not args.reasoning_model:
+            args.reasoning_model = args.model_name
+        print(f"   Split backend: vision={args.vision_model}@{args.vision_url}, reasoning={args.reasoning_model}@{args.reasoning_url}")
 
     print("=" * 60)
     print("🎮 Pokemon Emerald AI Agent")
