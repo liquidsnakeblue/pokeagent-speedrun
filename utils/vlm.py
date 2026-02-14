@@ -882,7 +882,7 @@ class SplitBackend(VLMBackend):
         reasoning_api_key = os.getenv('REASONING_API_KEY') or os.getenv('OPENAI_API_KEY') or 'none'
 
         # Vision model config
-        self.vision_model = kwargs.get('vision_model', 'qwen3-vl-32b-thinking')
+        self.vision_model = kwargs.get('vision_model', 'qwen3-vl-32b-instruct')
         vision_url = kwargs.get('vision_url', 'http://192.168.4.245:30002')
         vision_api_key = os.getenv('VISION_API_KEY') or os.getenv('OPENAI_API_KEY') or 'none'
 
